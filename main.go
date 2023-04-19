@@ -19,6 +19,20 @@ import (
 
 func main() {
 
+	ips := []string{"20.205.243.165", "199.59.148.9", "20.27.177.114", "192.30.255.121", "140.82.121.9", "140.82.121.10", "140.82.112.10", "140.82.113.9", "140.82.112.9", "140.82.114.10", "20.200.245.246", "140.82.113.10", "20.248.137.55", "20.207.73.88"}
+	domain := "codeload.github.com"
+
+	fmt.Println("开始测速...")
+
+	fastestIP, spds, err := testDomainIPs(domain, ips)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	for _, s := range spds {
+		fmt.Printf("ip: %s\t --> %d ms \t[%v]\n", s.ip, s.speed, s.isConnected)
+	}
+
 	args := os.Args[1:]
 	if len(args) == 0 {
 		files, err := filepath.Glob("*.txt")
@@ -110,9 +124,9 @@ func main() {
 		finalPath := fmt.Sprintf("output/%s/%s.zip", id[len(id)-3:], id)
 		if _, err := os.Stat(finalPath); os.IsNotExist(err) { // 如果文件不存在
 			log("Downloading %s to %s \n", url, targetPath)
-			if err := download(url, targetPath); err != nil {
+			if err := download(fastestIP, url, targetPath); err != nil {
 				//第二次使用master 仓库名下载
-				if err := download(url2, targetPath); err != nil {
+				if err := download(fastestIP, url2, targetPath); err != nil {
 					erro("Error downloading %s: %s  ID= %s \n", url2, err, id)
 					continue
 				} else {
@@ -140,9 +154,8 @@ func main() {
 	}
 }
 
-func download(url string, targetPath string) error {
+func download(ip string, url string, targetPath string) error {
 	// 如果出现异常，则返回错误
-	ip := "140.82.112.9"                                                                                                       // 如果不需要自定义 IP 就设置为空字符串
 	ua := "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/93.0.4577.82 Safari/537.36" // 如果不需要自定义 User-Agent 就设置为空字符串
 	err := httpIPdownloader.DownloadFile(url, targetPath, ip, ua)
 	return err
