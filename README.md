@@ -33,31 +33,31 @@ go build main.go netUtils.go
  全平台打包编译的命令：
 ```
 GOOS=linux GOARCH=amd64 go build -o main-linux-amd64 main.go netUtils.go && \
-sha1sum main-linux-amd64 > main-linux-amd64.sha1 && \
+shasum main-linux-amd64 > main-linux-amd64.sha && \
 
 GOOS=linux GOARCH=386 go build -o main-linux-386 main.go netUtils.go && \
-sha1sum main-linux-386 > main-linux-386.sha1 && \
+shasum main-linux-386 > main-linux-386.sha && \
 
 GOOS=linux GOARCH=arm GOARM=7 go build -o main-linux-arm7 main.go netUtils.go && \
-sha1sum main-linux-arm7 > main-linux-arm7.sha1 && \
+shasum main-linux-arm7 > main-linux-arm7.sha && \
 
 GOOS=linux GOARCH=arm64 go build -o main-linux-arm64 main.go netUtils.go && \
-sha1sum main-linux-arm64 > main-linux-arm64.sha1 && \
+shasum main-linux-arm64 > main-linux-arm64.sha && \
 
 GOOS=windows GOARCH=amd64 go build -o main-windows-amd64.exe main.go netUtils.go && \
-sha1sum main-windows-amd64.exe > main-windows-amd64.sha1 && \
+shasum main-windows-amd64.exe > main-windows-amd64.sha && \
 
 GOOS=windows GOARCH=386 go build -o main-windows-386.exe main.go netUtils.go && \
-sha1sum main-windows-386.exe > main-windows-386.sha1 && \
+shasum main-windows-386.exe > main-windows-386.sha && \
 
 GOOS=darwin GOARCH=amd64 go build -o main-darwin-amd64 main.go netUtils.go && \
-sha1sum main-darwin-amd64 > main-darwin-amd64.sha1 && \
+shasum main-darwin-amd64 > main-darwin-amd64.sha && \
 
 GOOS=darwin GOARCH=arm64 go build -o main-darwin-arm64 main.go netUtils.go && \
-sha1sum main-darwin-arm64 > main-darwin-arm64.sha1
+shasum main-darwin-arm64 > main-darwin-arm64.sha
 ```
 
-打包时，会对应的计算sha1签名，生成的文件在.sha1中
+打包时，会对应的计算sha签名，生成的文件在.sha中
 
 
 根据输入的文件中的 URL 列表，从 Github 上下载对应的代码库 zip 文件。它首先测试一组 IP 地址与目标域名的网络延迟，选择最快的 IP，然后逐一读取输入文件中的 URL 列表，解析 URL ，下载对应的代码库 zip 文件并保存到本地。
