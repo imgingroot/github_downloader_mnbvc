@@ -1,6 +1,6 @@
 # repo_list_filter_export
 
-把github repo api的jsonl过滤导出txt的程序
+把github repo api的jsonl过滤导出txt的程序，现在的过滤条件是 star > 0 且 watch >0 且 fork >0
 
 
 使用方法：
