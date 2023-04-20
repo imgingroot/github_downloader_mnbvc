@@ -124,6 +124,13 @@ func main() {
 			// 如果targetPath已经存在，则调到下一个
 			log("File %s already exists\n", targetPath)
 			continue
+		} else {
+			// 如果 targetPath 不存在，则创建一个空文件
+			_, err = os.Create(targetPath)
+			if err != nil {
+				erro("Error creating file %s: %s\n", targetPath, err)
+				continue
+			}
 		}
 
 		if _, err := os.Stat(finalPath); os.IsNotExist(err) { // 如果文件不存在
