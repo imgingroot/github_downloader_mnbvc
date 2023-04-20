@@ -65,7 +65,7 @@ def proc_file(f,output_file_path):
             if stargazers_count > 0 and watchers_count > 0 and forks_count > 0:
                 id = json_data.get('id')
                 clone_url = json_data.get('clone_url')
-                with open(output_file_path, 'a') as output_file:
+                with open(output_file_path, 'a', encoding='utf-8') as output_file:
                     output_file.write(f'{id}, {clone_url}\n')
 
 def gen_dir_by_id(data_dir, file_id):
@@ -85,7 +85,7 @@ def gen_dir_by_id(data_dir, file_id):
 
 def split_file(file_path, m):
     # 打开原始文件并按行读取内容
-    with open(file_path, 'r') as f:
+    with open(file_path, 'r', encoding='utf-8') as f:
         lines = f.readlines()
     # 根据 m 计算分割后文件的个数
     n = (len(lines) + m - 1) // m
@@ -94,7 +94,7 @@ def split_file(file_path, m):
         start = i * m
         end = (i + 1) * m
         sub_file_path = os.path.join(gen_dir_by_id(f"{file_path}_subs",i),f"{os.path.basename(file_path)}_{i}.txt")
-        with open(sub_file_path, 'w') as sub_file:
+        with open(sub_file_path, 'w', encoding='utf-8') as sub_file:
             sub_file.writelines(lines[start:end])
 
 def delete_file(file_name):
