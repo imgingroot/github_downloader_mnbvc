@@ -30,33 +30,36 @@ go build main.go netUtils.go
 已知问题：
  - 仅下载了main或者master分支，如果仓库没有这两个分支，会下载失败
 
- 全平台打包编译的命令：
+ 全平台打包编译的命令（[build.sh](./build.sh)）：
 ```
-GOOS=linux GOARCH=amd64 go build -o main-linux-amd64 main.go netUtils.go && \
-shasum main-linux-amd64 > main-linux-amd64.sha && \
+#!/bin/bash
 
-GOOS=linux GOARCH=386 go build -o main-linux-386 main.go netUtils.go && \
-shasum main-linux-386 > main-linux-386.sha && \
+# build binaries for Linux (amd64, 386, arm7, arm64)
+GOOS=linux GOARCH=amd64 go build -o gh_downloader-linux-amd64 main.go netUtils.go
+GOOS=linux GOARCH=386 go build -o gh_downloader-linux-386 main.go netUtils.go
+GOOS=linux GOARCH=arm GOARM=7 go build -o gh_downloader-linux-arm7 main.go netUtils.go
+GOOS=linux GOARCH=arm64 go build -o gh_downloader-linux-arm64 main.go netUtils.go
 
-GOOS=linux GOARCH=arm GOARM=7 go build -o main-linux-arm7 main.go netUtils.go && \
-shasum main-linux-arm7 > main-linux-arm7.sha && \
+# build binaries for Windows (amd64, 386)
+GOOS=windows GOARCH=amd64 go build -o gh_downloader-windows-amd64.exe main.go netUtils.go
+GOOS=windows GOARCH=386 go build -o gh_downloader-windows-386.exe main.go netUtils.go
 
-GOOS=linux GOARCH=arm64 go build -o main-linux-arm64 main.go netUtils.go && \
-shasum main-linux-arm64 > main-linux-arm64.sha && \
+# build binaries for macOS (amd64, arm64)
+GOOS=darwin GOARCH=amd64 go build -o gh_downloader-darwin-amd64 main.go netUtils.go
+GOOS=darwin GOARCH=arm64 go build -o gh_downloader-darwin-arm64 main.go netUtils.go
 
-GOOS=windows GOARCH=amd64 go build -o main-windows-amd64.exe main.go netUtils.go && \
-shasum main-windows-amd64.exe > main-windows-amd64.sha && \
+# calculate checksum for all the binaries
+shasum gh_downloader-linux-amd64 > gh_downloader-linux-amd64.sha
+shasum gh_downloader-linux-386 > gh_downloader-linux-386.sha
+shasum gh_downloader-linux-arm7 > gh_downloader-linux-arm7.sha
+shasum gh_downloader-linux-arm64 > gh_downloader-linux-arm64.sha
+shasum gh_downloader-windows-amd64.exe > gh_downloader-windows-amd64.sha
+shasum gh_downloader-windows-386.exe > gh_downloader-windows-386.sha
+shasum gh_downloader-darwin-amd64 > gh_downloader-darwin-amd64.sha
+shasum gh_downloader-darwin-arm64 > gh_downloader-darwin-arm64.sha
 
-GOOS=windows GOARCH=386 go build -o main-windows-386.exe main.go netUtils.go && \
-shasum main-windows-386.exe > main-windows-386.sha && \
-
-GOOS=darwin GOARCH=amd64 go build -o main-darwin-amd64 main.go netUtils.go && \
-shasum main-darwin-amd64 > main-darwin-amd64.sha && \
-
-GOOS=darwin GOARCH=arm64 go build -o main-darwin-arm64 main.go netUtils.go && \
-shasum main-darwin-arm64 > main-darwin-arm64.sha
 ```
-
+windows下编译打包参考 [build.bat](./build.bat)
 打包时，会对应的计算sha签名，生成的文件在.sha中
 
 
