@@ -27,7 +27,7 @@ def process_zip_file(zip_file_path, output_file_path):
             # 如果文件是jsonl格式，则进行处理
             if file_name.endswith('.jsonl'):
                 print(f"正在处理:{file_name}");
-                with myzip.open(file_name) as f:
+                with myzip.open(file_name, encoding='utf-8') as f:
                     proc_file(f,output_file_path)
 
 def process_dir(dir_path, output_file_path):
@@ -38,10 +38,10 @@ def process_dir(dir_path, output_file_path):
             try:
                 if file_name.endswith('.jsonl'):
                     print(f"正在处理:{file_name}");
-                    with open(os.path.join(root, file_name)) as f:
+                    with open(os.path.join(root, file_name), encoding='utf-8') as f:
                         proc_file(f, output_file_path)
             except:
-                logger.error(f"压缩文件处理错误 \n{file_name}")
+                logger.error(f"文件处理错误 \n{file_name}")
                 continue
 
 
