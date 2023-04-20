@@ -133,7 +133,7 @@ func main() {
 
 		if _, err := os.Stat(targetPath); err == nil {
 			// 如果targetPath已经存在，则调到下一个
-			log("File %s already exists\n", targetPath)
+			// log("File %s already exists\n", targetPath)
 			continue
 		}
 
@@ -165,7 +165,7 @@ func main() {
 			}
 			log("Moved %s to %s.\n", targetPath, finalPath)
 		} else {
-			log("Skipping download %s of %s, file already exists.\n", id, url)
+			// log("Skipping download %s of %s, file already exists.\n", id, url)
 		}
 	}
 

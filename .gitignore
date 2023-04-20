@@ -21,3 +21,5 @@ main-linux-amd64
 main-linux-arm7
 main-linux-arm64
 gh_jsonl2txt/repo_list_filter_export.log
+logs/
+output/
