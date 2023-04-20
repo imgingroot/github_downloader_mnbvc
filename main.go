@@ -122,8 +122,14 @@ func main() {
 		url2 := fmt.Sprintf("https://codeload.github.com/%s/%s/zip/refs/heads/master", author, name)
 		targetPath := fmt.Sprintf("output/%s.downloading", id)
 		finalPath := fmt.Sprintf("output/%s/%s.zip", id[len(id)-3:], id)
+		if _, err := os.Stat(targetPath); err == nil {
+			// 如果targetPath已经存在，则调到下一个
+			log("File %s already exists\n", targetPath)
+			continue
+		}
+
 		if _, err := os.Stat(finalPath); os.IsNotExist(err) { // 如果文件不存在
-			log("Downloading %s to %s \n", url, targetPath)
+			log("Downloading %s %s to %s \n", fastestIP, url, targetPath)
 			if err := download(fastestIP, url, targetPath); err != nil {
 				//第二次使用master 仓库名下载
 				if err := download(fastestIP, url2, targetPath); err != nil {
