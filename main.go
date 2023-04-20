@@ -100,6 +100,10 @@ func main() {
 		parts := strings.Split(line, ",")
 		id := parts[0]
 		addr := strings.Trim(parts[1], " ")
+		if len(id) < 3 {
+			// 使用 Printf 函数将其格式化为指定位宽和零填充
+			id = fmt.Sprintf("%03s", id)
+		}
 
 		// 解析地址
 		u, err := url.Parse(addr)
@@ -128,13 +132,14 @@ func main() {
 
 		if _, err := os.Stat(finalPath); os.IsNotExist(err) { // 如果文件不存在
 			log("Downloading %s %s to %s \n", fastestIP, url, targetPath)
-			
+
 			// 下载前，先touch一个 空文件
-			_, err = os.Create(targetPath)
+			tf, err := os.Create(targetPath)
 			if err != nil {
 				erro("Error creating file %s: %s\n", targetPath, err)
 				continue
 			}
+			tf.Close()
 			if err := download(fastestIP, url, targetPath); err != nil {
 				//第二次使用master 仓库名下载
 				if err := download(fastestIP, url2, targetPath); err != nil {
