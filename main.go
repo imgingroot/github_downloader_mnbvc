@@ -13,8 +13,6 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
-
-	"github.com/imgingroot/httpIPdownloader"
 )
 
 func main() {
@@ -163,6 +161,6 @@ func main() {
 func download(ip string, url string, targetPath string) error {
 	// 如果出现异常，则返回错误
 	ua := "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/93.0.4577.82 Safari/537.36" // 如果不需要自定义 User-Agent 就设置为空字符串
-	err := httpIPdownloader.DownloadFile(url, targetPath, ip, ua)
+	err := DownloadFile(url, targetPath, ip, ua)
 	return err
 }
