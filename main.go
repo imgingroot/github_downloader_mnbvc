@@ -128,7 +128,7 @@ func main() {
 
 		if _, err := os.Stat(finalPath); os.IsNotExist(err) { // 如果文件不存在
 			log("Downloading %s %s to %s \n", fastestIP, url, targetPath)
-
+			
 			// 下载前，先touch一个 空文件
 			_, err = os.Create(targetPath)
 			if err != nil {
@@ -139,6 +139,8 @@ func main() {
 				//第二次使用master 仓库名下载
 				if err := download(fastestIP, url2, targetPath); err != nil {
 					erro("Error downloading %s: %s  ID= %s \n", url2, err, id)
+					// //移除target,不移除失败文件
+					// err = os.Remove(targetPath)
 					continue
 				} else {
 					url = url2
@@ -156,7 +158,7 @@ func main() {
 			}
 			log("Moved %s to %s.\n", targetPath, finalPath)
 		} else {
-			log("Skipping download of %s, file already exists.\n", url)
+			log("Skipping download %s of %s, file already exists.\n", id, url)
 		}
 	}
 
