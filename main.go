@@ -122,8 +122,15 @@ func main() {
 		// 拼接 URL 并下载文件https://github.com/imgingroot/httpIPdownloader/archive/refs/heads/main.zip
 		url := fmt.Sprintf("https://codeload.github.com/%s/%s/zip/refs/heads/main", author, name)
 		url2 := fmt.Sprintf("https://codeload.github.com/%s/%s/zip/refs/heads/master", author, name)
-		targetPath := fmt.Sprintf("output/%s.downloading", id)
+		targetPath := fmt.Sprintf("output/%s/%s.downloading", id[len(id)-3:], id)
 		finalPath := fmt.Sprintf("output/%s/%s.zip", id[len(id)-3:], id)
+
+		// 检查目录是否存在
+		if err := os.MkdirAll(filepath.Dir(finalPath), os.ModePerm); err != nil {
+			erro("Error creating directory for %s: %s  ID= %s \n", finalPath, err, id)
+			continue
+		}
+
 		if _, err := os.Stat(targetPath); err == nil {
 			// 如果targetPath已经存在，则调到下一个
 			log("File %s already exists\n", targetPath)
@@ -152,11 +159,6 @@ func main() {
 				}
 			}
 			log("Downloaded %s.\n", url)
-			// 将文件移动到目标位置
-			if err := os.MkdirAll(filepath.Dir(finalPath), os.ModePerm); err != nil {
-				erro("Error creating directory for %s: %s  ID= %s \n", finalPath, err, id)
-				continue
-			}
 			if err := os.Rename(targetPath, finalPath); err != nil {
 				erro("Error moving %s to %s: %s  ID= %s \n", targetPath, finalPath, err, id)
 				continue
