@@ -5,7 +5,7 @@
 
 使用方法：
 ```
-python3 repo_list_filter_export.py jsonl.zip 1000
+python3 repo_list_filter_export.py jsonl.zip 100000
 ```
 
 输入可以是压缩包也可以是目录，1000 是把txt同时拆解到1000个文件
