@@ -24,7 +24,7 @@ def get_zipfile_info(zip_path, with_text=False):
                 with zf.open(info, 'r') as file:
                     dsize = temp_zip_size
                     if temp_zip_size > 32*1024:
-                        dsize = 8192
+                        dsize = 32*1024
 
                     content = file.read(dsize)
                     encoding = chardet.detect(content)['encoding']
@@ -75,6 +75,9 @@ def zipinfo_to_jsonl(input_path:str,output_path:str,file_json_path:str,delete_no
             for file_info in file_infos:
                 if file_info["encoding"] == None:
                     del_list.append(file_info["path"])
+                elif file_info["size"] > 10*1024*1024:
+                    del_list.append(file_info["path"])
+
             if len(del_list) > 0 :
                 logger.info(f"删除非文本文件 {len(del_list)}个")
             delete_from_zip_file(input_path,file_names=del_list)
