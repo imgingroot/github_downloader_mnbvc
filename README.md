@@ -1,5 +1,7 @@
-# gh_downloader
+# github_downloader_mnbvc
+
 github仓库下载器
+http://mnbvc.253874.net/
 
 批量下载github仓库的工具
 
