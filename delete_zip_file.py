@@ -49,6 +49,8 @@ def get_zipfile_info(zip_path, with_text=False):
                     "path": info.filename,
                     "size": temp_zip_size,
                     "encoding": "",
+                    "info": info,
+                    "zip_path": zip_path,
                     "created_at": datetime(*temp_zip_ctime).strftime('%Y-%m-%d %H:%M:%S'),
                     "modified_at": datetime(*temp_zip_mtime).strftime('%Y-%m-%d %H:%M:%S'),
                     "text": ""
@@ -67,6 +69,7 @@ def create_jsonl(file_path, file_infos):
 
 def zipinfo_to_jsonl(input_path: str, output_path: str, file_json_path: str, delete_non_text=False):
     # 获取所有文件信息并写入 JSONL 文件
+    # 获取所有文件信息并写入 JSONL 文件
     try:
         file_infos = list(get_zipfile_info(input_path))
         if len(file_infos) < 1:
@@ -78,17 +81,54 @@ def zipinfo_to_jsonl(input_path: str, output_path: str, file_json_path: str, del
             # 删除非文本文件
             # 打开zip文件
             del_list = []
+            #需要删除的后缀
+            delete_suffix=[]
+            #所有suffix
+            all_suffix={}
+            #遍历统计本库中suffix的平均大小
             for file_info in file_infos:
-                if file_info["ext"] in ext_list:
+                if file_info["ext"] in all_suffix:
+                    all_suffix[file_info["ext"]]["num"] += 1
+                    all_suffix[file_info["ext"]]["size"] += file_info["size"]
+                    all_suffix[file_info["ext"]]["avg"] = all_suffix[file_info["ext"]]["size"] / all_suffix[file_info["ext"]]["num"]
+                else:
+                    all_suffix[file_info["ext"]] = {}
+                    all_suffix[file_info["ext"]]["num"] = 1
+                    all_suffix[file_info["ext"]]["size"] = file_info["size"]
+                    all_suffix[file_info["ext"]]["avg"] = file_info["size"]
+            #遍历suffix，将需要删除的suffix放入list中
+            for key, value in all_suffix.items():
+                if value["avg"] > 200 * 1024:
+                    delete_suffix.append(key)
+            for file_info in file_infos:
+                #删除本仓库平均后缀大小大于200k的后缀
+                if file_info["ext"] in delete_suffix:
                     del_list.append(file_info["path"])
-                # if file_info["encoding"] == None:
-                #     del_list.append(file_info["path"])
+                #删除大于1mb的文件
                 elif file_info["size"] > 1 * 1024 * 1024:
                     del_list.append(file_info["path"])
+                #删除长度大于15的文件
+                elif len(file_info["ext"]) > 15:
+                    del_list.append(file_info["path"])
+                #如果文件大于32k，读取前32k字节看是否包含b'\0',当发现有后，本仓库所有该后缀文件直接删除
+                else:
+                    if file_info["size"] <= 32 * 1024:
+                        continue
+                    try:
+                        with zipfile.ZipFile(file_info["zip_path"]) as zf:
+                            with zf.open(file_info["info"], 'r') as file:
+                                dsize = 32 * 1024
+                                chunk = file.read(dsize)
+                                if b'\0' in chunk:
+                                    del_list.append(file_info["path"])
+                                    if len(file_info["ext"]) > 0:
+                                        delete_suffix.append(file_info["ext"])
+                    except Exception as e:
+                        traceback.print_exc()
             if len(del_list) > 0:
                 print(del_list)
                 logger.info(f"删除非文本文件 {len(del_list)}个")
-            delete_from_zip_file(input_path, file_names=del_list)
+                delete_from_zip_file(input_path, file_names=del_list)
 
         # if file_json_path is not None:
         #     file_infos = list(get_zipfile_info(input_path, True))
