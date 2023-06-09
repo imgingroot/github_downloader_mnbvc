@@ -7,6 +7,10 @@ import os
 import time
 import zipfile
 from datetime import datetime
+from traceback import print_exc
+from pathlib import PurePosixPath
+from copy import deepcopy
+import cchardet as chardet
 
 from ruamel.std.zipfile import delete_from_zip_file
 
@@ -137,6 +141,134 @@ def zipinfo_to_jsonl(input_path: str, output_path: str, file_json_path: str, del
         logger.error(f"处理过程中发生错误: {str(e)}")
 
 
+class Zipfile2JsonL:
+    def __init__(self, file_path, delete_non_text=False):
+        self.file_path = file_path
+        self.useless_ext_list = ext_list
+        self.useless_file_list = list()
+        self.max_ext_len = 15
+        self.max_file_size = 1 * 1024 * 1024
+        self.query_content_len = 32 * 1024
+        self.spec_content = [b'\0']
+        self.delete_non_text = delete_non_text
+        self.file_infos = list(self.get_zipfile_info())
+
+    def is_useless_file(self, filename):
+        if str(filename) in self.useless_file_list:
+            return True
+        return False
+
+    def collect_useless_file(self, file_path, file_enc, file_content, file_size, file_ext):
+        self.collect_useless_file_ext(file_content, file_ext)
+        if file_enc == None:
+            # 删除chardet结果为None的文件
+            self.useless_file_list.append(file_path)
+        elif file_size > self.max_file_size:
+            # 删除大于10M的文件
+            self.useless_file_list.append(file_path)
+        elif file_ext in self.useless_ext_list:
+            # 删除无用的文件类型
+            self.useless_file_list.append(file_path)
+
+    def collect_useless_file_ext(self, content, ext):
+        if ext in self.useless_ext_list:
+            return
+        elif len(ext) >= self.max_ext_len:
+            self.useless_ext_list.append(ext)
+        elif any([spec in content for spec in self.spec_content]):
+            self.useless_ext_list.append(ext)
+
+    def static_file_info(self):
+        info = dict()
+        for file in self.file_infos:
+            if file['ext'] not in self.useless_ext_list:
+                ext_info = info.get(file['ext'], {"num": 0, "size": 0, "avg_size": 0})
+                ext_info["num"] += 1
+                ext_info["size"] += file['size']
+                info[file['ext']] = ext_info
+        for key in info:
+            ext_info = info[key]
+            ext_info["avg_size"] = float(ext_info["size"]) / (float(ext_info["num"] + 0.000001))
+        return info
+
+    def get_zipfile_info(self):
+        with zipfile.ZipFile(self.file_path) as zf:
+            for info in zf.infolist():
+                if not info.is_dir():
+                    filename = PurePosixPath(info.filename)
+                    temp_zip_info = zf.getinfo(info.filename)
+                    temp_zip_size = temp_zip_info.file_size
+                    temp_zip_ctime = temp_zip_info.date_time
+                    temp_zip_mtime = temp_zip_info.date_time
+                    file_ext = filename.suffix.strip('.')
+                    with zf.open(info, 'r') as file:
+                        query_content_len = min(temp_zip_size, self.query_content_len)
+                        content = file.read(query_content_len)
+                        encoding = chardet.detect(content)['encoding']
+                        text = None
+                        self.collect_useless_file(str(filename), file_enc=encoding, file_content=content,
+                                                  file_size=temp_zip_size, file_ext=file_ext)
+                        # self.collect_useless_file_ext(content, filename.suffix.strip('.'))
+
+                        if encoding is not None and not self.is_useless_file(filename):
+                            # 详细检测内码
+                            file.seek(0)
+                            content = file.read()
+                            encoding = chardet.detect(content)['encoding']
+                            if encoding is not None:
+                                text = content.decode(encoding, 'ignore')
+
+                        yield {
+                            "file_name": filename.name,
+                            "ext": filename.suffix.strip('.'),
+                            "path": str(filename),
+                            "size": temp_zip_size,
+                            "encoding": encoding,
+                            "created_at": datetime(*temp_zip_ctime).strftime('%Y-%m-%d %H:%M:%S'),
+                            "modified_at": datetime(*temp_zip_mtime).strftime('%Y-%m-%d %H:%M:%S'),
+                            "text": text
+                        }
+
+    def dump_to_jsonl(self, output_file_path, with_text=False):
+        file_infos = deepcopy(self.file_infos)
+        with open(output_file_path, 'w') as f:
+            for file_info in file_infos:
+                if not with_text:
+                    file_info['text'] = None
+                json.dump(file_info, f)
+
+                f.write('\n')
+
+    def remove_useless_file(self):
+        for file_info in self.file_infos:
+            if self.is_useless_file(file_info['path']):
+                continue
+            if file_info["ext"] in self.useless_ext_list:
+                self.useless_file_list.append(file_info["path"])
+
+        self.file_infos = list(filter(lambda fi: fi["path"] not in self.useless_file_list, self.file_infos))
+        if len(self.useless_file_list) > 0:
+            logger.info(f"删除非文本文件 {len(self.useless_file_list)}个")
+        # delete_from_zip_file(self.file_path, file_names=self.useless_file_list)
+
+    def __call__(self, output_path, file_json_path, delete_non_text=False):
+        try:
+            if len(self.file_infos) < 1:
+                logger.error(f"压缩包为空: {str(self.file_path)}")
+                return 0
+            if output_path is not None:
+                self.dump_to_jsonl(output_path, with_text=False)
+            if delete_non_text:
+                self.remove_useless_file()
+            if file_json_path is not None:
+                self.dump_to_jsonl(file_json_path, with_text=True)
+            ext_file_info = self.static_file_info()
+            print(ext_file_info)
+        except Exception as e:
+            print_exc()
+            logger.error(f"处理过程中发生错误: {str(e)}")
+
+
 def process_zips(root_dir):
     """递归遍历目录中的 zip 文件并调用 zipinfo 函数处理"""
     # 获取当前目录下的所有文件和文件夹
@@ -157,7 +289,10 @@ def process_zips(root_dir):
             if not os.path.exists(json_file_path):
                 # 记录开始时间
                 start_time = time.perf_counter()
-                zipinfo_to_jsonl(file_path, json_file_path, None, True)
+                handler = Zipfile2JsonL(file_path)
+                meta_file_path = json_file_path.replace(".zip", ".meta.json")
+                handler(output_path=meta_file_path, file_json_path=json_file_path, delete_non_text=True)
+                # zipinfo_to_jsonl(file_path, json_file_path, None, True)
                 # 计算并输出执行时间
                 exec_time = time.perf_counter() - start_time
                 print(f'zip文件 {file_path} 处理完成，耗时 {exec_time:.2f} 秒')
