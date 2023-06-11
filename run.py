@@ -8,12 +8,12 @@ from typing import List, Tuple
 from pathlib import Path
 import concurrent.futures
 
-
 from requests.adapters import HTTPAdapter
 from urllib.parse import urlparse
 from urllib3.util.retry import Retry
 
 from delete_zip_file import zipinfo_to_jsonl, get_zipfile_info, delete_from_zip_file
+
 
 def test_ip_speed(hostname: str, ip: str):
     start = time.time()
@@ -30,6 +30,7 @@ def test_ip_speed(hostname: str, ip: str):
     except:
         elapsed = int((time.time() - start) * 1000)
         return {'ip': ip, 'speed': elapsed, 'is_connected': False}
+
 
 def test_domain_ips(hostname: str, ips: List[str]) -> Tuple[str, List[dict], Exception]:
     speeds = []
@@ -65,13 +66,17 @@ def download_file(url: str, filename: str, ip: str, ua: str) -> Exception:
 
     return None
 
+
 def download(ip: str, url: str, target_path: str) -> Exception:
     ua = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/93.0.4577.82 Safari/537.36'
     err = download_file(url, target_path, ip, ua)
     return err
 
+
 def start():
-    ips = ["20.205.243.165", "199.59.148.9", "20.27.177.114", "192.30.255.121", "140.82.121.9", "140.82.121.10", "140.82.112.10", "140.82.113.9", "140.82.112.9", "140.82.114.10", "20.200.245.246", "140.82.113.10", "20.248.137.55", "20.207.73.88"]
+    ips = ["20.205.243.165", "199.59.148.9", "20.27.177.114", "192.30.255.121", "140.82.121.9", "140.82.121.10",
+           "140.82.112.10", "140.82.113.9", "140.82.112.9", "140.82.114.10", "20.200.245.246", "140.82.113.10",
+           "20.248.137.55", "20.207.73.88"]
     domain = "codeload.github.com"
 
     fastest_ip, spds, err = test_domain_ips(domain, ips)
@@ -133,7 +138,7 @@ def start():
                 Path(target_path).touch()
                 err = download(fastest_ip, url, target_path)
                 if err:
-                    #第二次使用master 仓库名下载
+                    # 第二次使用master 仓库名下载
                     err = download(fastest_ip, url2, target_path)
                     if err:
                         print(f"Error downloading {url2}: {err}  ID= {rid}")
