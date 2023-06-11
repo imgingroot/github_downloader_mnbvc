@@ -73,7 +73,6 @@ def create_jsonl(file_path, file_infos):
 
 def zipinfo_to_jsonl(input_path: str, output_path: str, file_json_path: str, delete_non_text=False):
     # 获取所有文件信息并写入 JSONL 文件
-    # 获取所有文件信息并写入 JSONL 文件
     try:
         file_infos = list(get_zipfile_info(input_path))
         if len(file_infos) < 1:
@@ -87,6 +86,8 @@ def zipinfo_to_jsonl(input_path: str, output_path: str, file_json_path: str, del
             del_list = []
             #需要删除的后缀
             delete_suffix=[]
+            #需要跳过的后缀
+            whitelist_suffix=[]
             #所有suffix
             all_suffix={}
             #遍历统计本库中suffix的平均大小
@@ -100,13 +101,17 @@ def zipinfo_to_jsonl(input_path: str, output_path: str, file_json_path: str, del
                     all_suffix[file_info["ext"]]["num"] = 1
                     all_suffix[file_info["ext"]]["size"] = file_info["size"]
                     all_suffix[file_info["ext"]]["avg"] = file_info["size"]
+                    all_suffix[file_info["ext"]]["notBnum"] = 0
             #遍历suffix，将需要删除的suffix放入list中
             for key, value in all_suffix.items():
                 if value["avg"] > 200 * 1024:
                     delete_suffix.append(key)
             for file_info in file_infos:
+                #如果是白名单后缀则跳过
+                if file_info["ext"] in whitelist_suffix:
+                    continue
                 #删除本仓库平均后缀大小大于200k的后缀
-                if file_info["ext"] in delete_suffix:
+                elif file_info["ext"] in delete_suffix:
                     del_list.append(file_info["path"])
                 #删除大于1mb的文件
                 elif file_info["size"] > 1 * 1024 * 1024:
@@ -127,6 +132,11 @@ def zipinfo_to_jsonl(input_path: str, output_path: str, file_json_path: str, del
                                     del_list.append(file_info["path"])
                                     if len(file_info["ext"]) > 0:
                                         delete_suffix.append(file_info["ext"])
+                                else:
+                                    if all_suffix[file_info["ext"]]["notBnum"] >= 100:
+                                        whitelist_suffix.append(file_info["ext"])
+                                    else:
+                                        all_suffix[file_info["ext"]]["notBnum"] += 1
                     except Exception as e:
                         traceback.print_exc()
             if len(del_list) > 0:
