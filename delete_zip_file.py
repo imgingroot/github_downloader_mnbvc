@@ -52,7 +52,7 @@ def get_zipfile_info(zip_path, with_text=False):
                     "ext": os.path.splitext(info.filename)[-1].strip('.'),
                     "path": info.filename,
                     "size": temp_zip_size,
-                    "encoding": "",
+                    #"encoding": "",
                     "info": info,
                     "zip_path": zip_path,
                     "created_at": datetime(*temp_zip_ctime).strftime('%Y-%m-%d %H:%M:%S'),
@@ -133,7 +133,7 @@ def zipinfo_to_jsonl(input_path: str, output_path: str, file_json_path: str, del
                                     if len(file_info["ext"]) > 0:
                                         delete_suffix.append(file_info["ext"])
                                 else:
-                                    if all_suffix[file_info["ext"]]["notBnum"] >= 100:
+                                    if all_suffix[file_info["ext"]]["notBnum"] >= 10:
                                         whitelist_suffix.append(file_info["ext"])
                                     else:
                                         all_suffix[file_info["ext"]]["notBnum"] += 1
@@ -214,26 +214,26 @@ class Zipfile2JsonL:
                     with zf.open(info, 'r') as file:
                         query_content_len = min(temp_zip_size, self.query_content_len)
                         content = file.read(query_content_len)
-                        encoding = chardet.detect(content)['encoding']
+                        #encoding = chardet.detect(content)['encoding']
                         text = None
-                        self.collect_useless_file(str(filename), file_enc=encoding, file_content=content,
-                                                  file_size=temp_zip_size, file_ext=file_ext)
+                        # self.collect_useless_file(str(filename), file_enc=encoding, file_content=content,
+                        #                           file_size=temp_zip_size, file_ext=file_ext)
                         # self.collect_useless_file_ext(content, filename.suffix.strip('.'))
 
-                        if encoding is not None and not self.is_useless_file(filename):
-                            # 详细检测内码
-                            file.seek(0)
-                            content = file.read()
-                            encoding = chardet.detect(content)['encoding']
-                            if encoding is not None:
-                                text = content.decode(encoding, 'ignore')
+                        # if encoding is not None and not self.is_useless_file(filename):
+                        #     # 详细检测内码
+                        #     file.seek(0)
+                        #     content = file.read()
+                        #     encoding = chardet.detect(content)['encoding']
+                        #     if encoding is not None:
+                        #         text = content.decode(encoding, 'ignore')
 
                         yield {
                             "file_name": filename.name,
                             "ext": filename.suffix.strip('.'),
                             "path": str(filename),
                             "size": temp_zip_size,
-                            "encoding": encoding,
+                            #"encoding": encoding,
                             "created_at": datetime(*temp_zip_ctime).strftime('%Y-%m-%d %H:%M:%S'),
                             "modified_at": datetime(*temp_zip_mtime).strftime('%Y-%m-%d %H:%M:%S'),
                             "text": text
@@ -273,7 +273,7 @@ class Zipfile2JsonL:
             if file_json_path is not None:
                 self.dump_to_jsonl(file_json_path, with_text=True)
             ext_file_info = self.static_file_info()
-            print(ext_file_info)
+            # print(ext_file_info)
         except Exception as e:
             print_exc()
             logger.error(f"处理过程中发生错误: {str(e)}")
