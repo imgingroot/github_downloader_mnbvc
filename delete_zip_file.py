@@ -8,9 +8,11 @@ import time
 import zipfile
 from datetime import datetime
 from traceback import print_exc
-from pathlib import PurePosixPath
+from pathlib import PurePosixPath, Path
 from copy import deepcopy
 import cchardet as chardet
+from charset_mnbvc import api
+from enum import Enum
 
 from ruamel.std.zipfile import delete_from_zip_file
 
@@ -19,6 +21,11 @@ logger = logging.getLogger(__name__)
 
 ext_list = ["zip", "rar", "7z", "nib", "sim", "train", "stats", "wav", "pg", "png", "gif", "jpg", "svn-base", "class",
             "out", "jar", "glif", "dat", "o", "pdf", "gz", "md5", "bmp", "ico", "tga", "acc"]
+
+
+class CCharDetFunc(str, Enum):
+    CCHARDET = "cchardet"
+    CHARSET_MNBVC = "charset_mnbvc"
 
 
 def get_zipfile_info(zip_path, with_text=False):
@@ -84,42 +91,43 @@ def zipinfo_to_jsonl(input_path: str, output_path: str, file_json_path: str, del
             # 删除非文本文件
             # 打开zip文件
             del_list = []
-            #需要删除的后缀
-            delete_suffix=[]
-            #需要跳过的后缀
-            whitelist_suffix=[]
-            #所有suffix
-            all_suffix={}
-            #遍历统计本库中suffix的平均大小
+            # 需要删除的后缀
+            delete_suffix = []
+            # 需要跳过的后缀
+            whitelist_suffix = []
+            # 所有suffix
+            all_suffix = {}
+            # 遍历统计本库中suffix的平均大小
             for file_info in file_infos:
                 if file_info["ext"] in all_suffix:
                     all_suffix[file_info["ext"]]["num"] += 1
                     all_suffix[file_info["ext"]]["size"] += file_info["size"]
-                    all_suffix[file_info["ext"]]["avg"] = all_suffix[file_info["ext"]]["size"] / all_suffix[file_info["ext"]]["num"]
+                    all_suffix[file_info["ext"]]["avg"] = all_suffix[file_info["ext"]]["size"] / \
+                                                          all_suffix[file_info["ext"]]["num"]
                 else:
                     all_suffix[file_info["ext"]] = {}
                     all_suffix[file_info["ext"]]["num"] = 1
                     all_suffix[file_info["ext"]]["size"] = file_info["size"]
                     all_suffix[file_info["ext"]]["avg"] = file_info["size"]
                     all_suffix[file_info["ext"]]["notBnum"] = 0
-            #遍历suffix，将需要删除的suffix放入list中
+            # 遍历suffix，将需要删除的suffix放入list中
             for key, value in all_suffix.items():
                 if value["avg"] > 200 * 1024:
                     delete_suffix.append(key)
             for file_info in file_infos:
-                #如果是白名单后缀则跳过
+                # 如果是白名单后缀则跳过
                 if file_info["ext"] in whitelist_suffix:
                     continue
-                #删除本仓库平均后缀大小大于200k的后缀
+                # 删除本仓库平均后缀大小大于200k的后缀
                 elif file_info["ext"] in delete_suffix:
                     del_list.append(file_info["path"])
-                #删除大于1mb的文件
+                # 删除大于1mb的文件
                 elif file_info["size"] > 1 * 1024 * 1024:
                     del_list.append(file_info["path"])
-                #删除长度大于15的文件
+                # 删除长度大于15的文件
                 elif len(file_info["ext"]) > 15:
                     del_list.append(file_info["path"])
-                #如果文件大于32k，读取前32k字节看是否包含b'\0',当发现有后，本仓库所有该后缀文件直接删除
+                # 如果文件大于32k，读取前32k字节看是否包含b'\0',当发现有后，本仓库所有该后缀文件直接删除
                 else:
                     if file_info["size"] <= 32 * 1024:
                         continue
@@ -161,6 +169,8 @@ class Zipfile2JsonL:
         self.query_content_len = 32 * 1024
         self.spec_content = [b'\0']
         self.delete_non_text = delete_non_text
+        self.cchardet_func = CCharDetFunc.CCHARDET
+        self.target_encoding = "utf-8"
         self.file_infos = list(self.get_zipfile_info())
 
     def is_useless_file(self, filename):
@@ -202,6 +212,14 @@ class Zipfile2JsonL:
         return info
 
     def get_zipfile_info(self):
+        def detect_char_encode(_content: bytes):
+            if self.cchardet_func == CCharDetFunc.CCHARDET:
+                return api.from_data(content, mode=2)
+            elif self.cchardet_func == CCharDetFunc.CHARSET_MNBVC:
+                return api.from_data(content, mode=1)
+            else:
+                raise NotImplementedError
+
         with zipfile.ZipFile(self.file_path) as zf:
             for info in zf.infolist():
                 if not info.is_dir():
@@ -214,7 +232,8 @@ class Zipfile2JsonL:
                     with zf.open(info, 'r') as file:
                         query_content_len = min(temp_zip_size, self.query_content_len)
                         content = file.read(query_content_len)
-                        encoding = chardet.detect(content)['encoding']
+                        # encoding = chardet.detect(content)['encoding']
+                        encoding = detect_char_encode(content)
                         text = None
                         self.collect_useless_file(str(filename), file_enc=encoding, file_content=content,
                                                   file_size=temp_zip_size, file_ext=file_ext)
@@ -224,9 +243,11 @@ class Zipfile2JsonL:
                             # 详细检测内码
                             file.seek(0)
                             content = file.read()
-                            encoding = chardet.detect(content)['encoding']
+                            encoding = detect_char_encode(content)
+                            # encoding = chardet.detect(content)['encoding']
                             if encoding is not None:
-                                text = content.decode(encoding, 'ignore')
+                                # text = content.decode(encoding, 'ignore')
+                                text = api.convert_encoding(content, encoding, self.target_encoding)
 
                         yield {
                             "file_name": filename.name,
@@ -279,33 +300,23 @@ class Zipfile2JsonL:
             logger.error(f"处理过程中发生错误: {str(e)}")
 
 
-def process_zips(root_dir):
+def process_zips(root_dir, save_root):
     """递归遍历目录中的 zip 文件并调用 zipinfo 函数处理"""
     # 获取当前目录下的所有文件和文件夹
-    file_list = os.listdir(root_dir)
-    for file_name in file_list:
-        # 获取文件的完整路径
-        file_path = os.path.join(root_dir, file_name)
-        # 判断是否为目录，如果是则进行递归遍历
-        if os.path.isdir(file_path):
-            process_zips(file_path)
-        # 如果是 zip 文件则进行处理
-        elif file_name.endswith('.zip'):
-            # 构造结果文件名
-            json_file_name = file_name.replace('.zip', '.jsonl')
-            # 构造完整路径
-            json_file_path = os.path.join(root_dir, json_file_name)
-            # 判断 json 文件是否存在，如果不存在就调用 zipinfo 函数进行处理
-            if not os.path.exists(json_file_path):
-                # 记录开始时间
-                start_time = time.perf_counter()
-                handler = Zipfile2JsonL(file_path)
-                meta_file_path = json_file_path.replace(".zip", ".meta.json")
-                handler(output_path=meta_file_path, file_json_path=json_file_path, delete_non_text=True)
-                # zipinfo_to_jsonl(file_path, json_file_path, None, True)
-                # 计算并输出执行时间
-                exec_time = time.perf_counter() - start_time
-                print(f'zip文件 {file_path} 处理完成，耗时 {exec_time:.2f} 秒')
+    root_dir = Path(root_dir)
+    save_root = Path(save_root) if save_root else root_dir
+    file_list = root_dir.rglob("**/*.zip")
+    for file in file_list:
+        json_file_path = save_root / file.with_suffix(".jsonl").name
+        if not json_file_path.exists():
+            start_time = time.perf_counter()
+            handler = Zipfile2JsonL(file)
+            meta_file_path = json_file_path.with_suffix(".meta.json")
+            handler(output_path=meta_file_path, file_json_path=json_file_path, delete_non_text=True)
+            # zipinfo_to_jsonl(file_path, json_file_path, None, True)
+            # 计算并输出执行时间
+            exec_time = time.perf_counter() - start_time
+            print(f'zip文件 {file} 处理完成，耗时 {exec_time:.2f} 秒')
 
 
 if __name__ == '__main__':
@@ -317,5 +328,5 @@ if __name__ == '__main__':
     args = parser.parse_args()
     # if args.output is None and args.text_jsonl_output is None:
     #     parser.error("-o 和 -t 参数不能同时为空")
-    process_zips(args.input)
+    process_zips(args.input, args.output)
     # zipinfo_to_jsonl(args.input, args.output, args.text_jsonl_output, args.delete_non_text)

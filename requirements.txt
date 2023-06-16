@@ -2,3 +2,5 @@ cchardet
 ruamel.std.zipfile
 requests
 urllib3
+chardet-mnbvc
+tqdm
