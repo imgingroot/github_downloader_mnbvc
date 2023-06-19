@@ -1,4 +1,5 @@
 import os
+import glob
 import time
 import shutil
 
@@ -13,24 +14,22 @@ from urllib.parse import urlparse
 from urllib3.util.retry import Retry
 
 from delete_zip_file import zipinfo_to_jsonl, get_zipfile_info, delete_from_zip_file
+import traceback
+import urllib3
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 
 def test_ip_speed(hostname: str, ip: str):
-    start = time.time()
-    session = requests.Session()
-    retry = Retry(total=5, backoff_factor=0.1, status_forcelist=[500, 502, 503, 504])
-    adapter = HTTPAdapter(max_retries=retry)
-    session.mount('http://', adapter)
-    session.mount('https://', adapter)
 
     try:
-        response = session.get(f'https://{hostname}', timeout=5)
-        elapsed = int((time.time() - start) * 1000)
-        return {'ip': ip, 'speed': elapsed, 'is_connected': True}
+        r = requests.head(f"https://{ip}", headers={"host": hostname}, verify=False, timeout=5)
+        if r.status_code < 500:
+            return {'ip': ip, 'speed': r.elapsed.microseconds, 'is_connected': True}
+        else:
+            return {'ip': ip, 'speed': r.elapsed.microseconds, 'is_connected': False}
     except:
-        elapsed = int((time.time() - start) * 1000)
-        return {'ip': ip, 'speed': elapsed, 'is_connected': False}
-
+        traceback.print_exc()
+        return {'ip': ip, 'speed': float('inf'), 'is_connected': False}
 
 def test_domain_ips(hostname: str, ips: List[str]) -> Tuple[str, List[dict], Exception]:
     speeds = []
@@ -50,9 +49,13 @@ def test_domain_ips(hostname: str, ips: List[str]) -> Tuple[str, List[dict], Exc
 
 
 def download_file(url: str, filename: str, ip: str, ua: str) -> Exception:
-    headers = {}
+    host = urlparse(url).hostname
+    headers = {'host': host}
     if ua:
         headers['User-Agent'] = ua
+
+    if ip:
+        url = url.replace(host, ip)
 
     try:
         with requests.get(url, headers=headers, stream=True, verify=False) as response:
@@ -75,8 +78,8 @@ def download(ip: str, url: str, target_path: str) -> Exception:
 
 def start():
     ips = ["20.205.243.165", "199.59.148.9", "20.27.177.114", "192.30.255.121", "140.82.121.9", "140.82.121.10",
-           "140.82.112.10", "140.82.113.9", "140.82.112.9", "140.82.114.10", "20.200.245.246", "140.82.113.10",
-           "20.248.137.55", "20.207.73.88"]
+            "140.82.112.10", "140.82.113.9", "140.82.112.9", "140.82.114.10", "20.200.245.246", "140.82.113.10",
+            "20.248.137.55", "20.207.73.88"]
     domain = "codeload.github.com"
 
     fastest_ip, spds, err = test_domain_ips(domain, ips)
@@ -88,16 +91,7 @@ def start():
     for s in spds:
         print(f"ip: {s['ip']}\t --> {s['speed']} ms \t[{s['is_connected']}]")
 
-    args = os.sys.argv[1:]
-    if len(args) == 0:
-        files = list(Path('.').glob('*.txt'))
-        if len(files) == 0:
-            print("Usage: python run.py <input_file> . No txt files found in current directory")
-            return
-
-        args = [str(files[0])]
-
-    filename = args[0]
+    filename = "repos_list.txt"
     print("Processing file:", filename)
 
     # 打开待处理文件
@@ -105,6 +99,7 @@ def start():
         for line in file:
             # 解析行数据
             parts = line.strip().split(',')
+            print(parts)
             rid = parts[0]
             addr = parts[1].strip()
             if len(rid) < 3:
