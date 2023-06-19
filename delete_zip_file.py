@@ -253,7 +253,7 @@ class Zipfile2JsonL:
                             "ext": filename.suffix.strip('.'),
                             "path": str(filename),
                             "size": temp_zip_size,
-                            "encoding": encoding,
+                            #"encoding": encoding,
                             "created_at": datetime(*temp_zip_ctime).strftime('%Y-%m-%d %H:%M:%S'),
                             "modified_at": datetime(*temp_zip_mtime).strftime('%Y-%m-%d %H:%M:%S'),
                             "text": text
