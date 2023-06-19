@@ -106,6 +106,8 @@ def zipinfo_to_jsonl(input_path: str, output_path: str, file_json_path: str, del
             for key, value in all_suffix.items():
                 if value["avg"] > 200 * 1024:
                     delete_suffix.append(key)
+            big_32k_file = 0
+            check_times = 10
             for file_info in file_infos:
                 #如果是白名单后缀则跳过
                 if file_info["ext"] in whitelist_suffix:
@@ -123,6 +125,9 @@ def zipinfo_to_jsonl(input_path: str, output_path: str, file_json_path: str, del
                 else:
                     if file_info["size"] <= 32 * 1024:
                         continue
+                    big_32k_file += 1
+                    if big_32k_file > 1000:
+                        check_times = 1
                     try:
                         with zipfile.ZipFile(file_info["zip_path"]) as zf:
                             with zf.open(file_info["info"], 'r') as file:
@@ -133,7 +138,7 @@ def zipinfo_to_jsonl(input_path: str, output_path: str, file_json_path: str, del
                                     if len(file_info["ext"]) > 0:
                                         delete_suffix.append(file_info["ext"])
                                 else:
-                                    if all_suffix[file_info["ext"]]["notBnum"] >= 10:
+                                    if all_suffix[file_info["ext"]]["notBnum"] >= check_times:
                                         whitelist_suffix.append(file_info["ext"])
                                     else:
                                         all_suffix[file_info["ext"]]["notBnum"] += 1
