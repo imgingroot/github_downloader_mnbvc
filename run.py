@@ -1,6 +1,7 @@
 import os
 import time
 import shutil
+import zipfile
 import urllib3
 import requests
 import concurrent.futures
@@ -8,7 +9,7 @@ import concurrent.futures
 from pathlib import Path
 from urllib.parse import urlparse
 
-from delete_zip_file import zipinfo_to_jsonl
+from delete_zip_file import process_zips
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
@@ -95,11 +96,25 @@ def gen_jsonl(final_path):
     # 判断 jsonl 文件是否存在，如果不存在，就调用 zipinfo 函数进行处理
     if not os.path.exists(json_file_path):
         start_time = time.perf_counter()
-        zipinfo_to_jsonl(final_path, json_file_path, None, True)
+        # zipinfo_to_jsonl(final_path, json_file_path, None, True)
+        final_folder = final_path.rsplit("/", 1)[0]
+        process_zips(final_folder, final_folder)
         exec_time = time.perf_counter() - start_time
         print(f"zip文件 {final_path} 处理完成，耗时 {exec_time:.2f} 秒")
+
+def pack_zip_file():
+    name_before_zip = 'output-' + time.strftime("%Y%m%d-%H%M%S")
+    shutil.move("output", name_before_zip)
+    ziper = zipfile.ZipFile(name_before_zip+".zip", "w", zipfile.ZIP_DEFLATED)
+    for path, dirname, filenames in os.walk(name_before_zip):
+        fpath = path.replace(name_before_zip, '')
+        for fn in filenames:
+            ziper.write(os.path.join(path, fn), os.path.join(fpath, fn))
+    ziper.close()
+    shutil.rmtree(name_before_zip)
     
 def parse_one_line(line, fastest_ip):
+    global output_size
     rid, addr = line.strip().split(",", 1)
     addr = addr.strip()
     if len(rid) < 3: rid = rid.zfill(3)
@@ -123,15 +138,28 @@ def parse_one_line(line, fastest_ip):
         err = down(fastest_ip, url, final_path)
         if err is not None:
             print(f"Error downloading {url}: {err}  ID= {rid}")
+            with open("output/error.log", "a", encoding='utf-8')as a:
+                a.write(f"{rid}\t{url}\t{err}\n")
     
     if os.path.exists(final_path):
         print("parsing zip file")
         gen_jsonl(final_path)
         print("zip file parsed.")
+        output_size += os.path.getsize(final_path)
+        output_size += os.path.getsize(final_path[:-4]+'.jsonl')
+        output_size += os.path.getsize(final_path[:-4]+'.meta.jsonl')
+        if output_size >= 1024*1024*1024*10:  # 大于10g，打包一下
+            pack_zip_file()
+        output_size = 0
 
 def main():
 
     filename = "repos_list.txt"
+    global output_size
+    output_size = 0
+    for a,_,b in os.walk('output'):
+        for j in b:
+            output_size += os.path.getsize(os.path.join(a, j))
 
     fastest_ip, speeds, err = find_fastest_ip()
     print("Fastest IP:", fastest_ip)
@@ -144,6 +172,7 @@ def main():
     with open(filename, "r", encoding="utf-8")as reader:
         for line in reader:
             parse_one_line(line, fastest_ip)
+    if os.listdir("output"): pack_zip_file()
 
 if __name__ == '__main__':
     main()
