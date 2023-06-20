@@ -148,7 +148,7 @@ def parse_one_line(line, fastest_ip):
         output_size += os.path.getsize(final_path)
         output_size += os.path.getsize(final_path[:-4]+'.jsonl')
         output_size += os.path.getsize(final_path[:-4]+'.meta.jsonl')
-        if output_size >= 1024*1024*10:  # 大于10g，打包一下
+        if output_size >= 1024*1024*1024*10:  # 大于10g，打包一下
             pack_zip_file()
         output_size = 0
 
