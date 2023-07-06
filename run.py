@@ -9,7 +9,7 @@ import concurrent.futures
 from pathlib import Path
 from urllib.parse import urlparse
 
-from delete_zip_file import process_zips
+from delete_zip_file import process_zip
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
@@ -96,9 +96,7 @@ def gen_jsonl(final_path):
     # 判断 jsonl 文件是否存在，如果不存在，就调用 zipinfo 函数进行处理
     if not os.path.exists(json_file_path):
         start_time = time.perf_counter()
-        # zipinfo_to_jsonl(final_path, json_file_path, None, True)
-        final_folder = final_path.rsplit("/", 1)[0]
-        process_zips(final_folder, final_folder)
+        process_zip(final_path)
         exec_time = time.perf_counter() - start_time
         print(f"zip文件 {final_path} 处理完成，耗时 {exec_time:.2f} 秒")
 
@@ -146,8 +144,10 @@ def parse_one_line(line, fastest_ip):
         gen_jsonl(final_path)
         print("zip file parsed.")
         output_size += os.path.getsize(final_path)
-        output_size += os.path.getsize(final_path[:-4]+'.jsonl')
-        output_size += os.path.getsize(final_path[:-4]+'.meta.jsonl')
+        if os.path.exists(final_path[:-4] + ".jsonl"):
+            output_size += os.path.getsize(final_path[:-4]+'.jsonl')
+        if os.path.exists(final_path[:-4] + ".meta.jsonl"):
+            output_size += os.path.getsize(final_path[:-4]+'.meta.jsonl')
         if output_size >= 1024*1024*1024*10:  # 大于10g，打包一下
             pack_zip_file()
         output_size = 0
