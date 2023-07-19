@@ -11,6 +11,8 @@ from urllib.parse import urlparse
 
 from delete_zip_file import process_zip
 
+from converter import Zipfile2JsonL
+
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 def test_ip_speed(hostname: str, ip: str):
@@ -60,12 +62,6 @@ def download(url, filename, fastest_ip):
             print("download finished")
         else:
             return Exception(f'response error with status code = {resp.status_code}')
-        # with requests.get(url, headers=headers, stream=True, verify=False) as response:
-        #     if response.status_code == 200:
-        #         with open(filename, 'wb') as file:
-        #             shutil.copyfileobj(response.raw, file)
-        #     else:
-        #         return Exception(f'response error with status code = {response.status_code}')
     except Exception as e:
         return e
 
@@ -75,8 +71,9 @@ def down(fastest_ip, url, final_path):
 
     print(f"Downloading {fastest_ip} {url} to {target_path}")
 
-    # 下载前，先touch一个 空文件
+    # 如果此前已有downloading文件，说明之前下载未完成，删除历史文件重新下载
     if os.path.exists(target_path): os.unlink(target_path)
+    # 优先使用main下载，若不成功再尝试使用master
     err = download(url, target_path, fastest_ip)
     print('err1', err)
     if err:
@@ -90,29 +87,7 @@ def down(fastest_ip, url, final_path):
     shutil.move(target_path, final_path)
     print(f"Moved {target_path} to {final_path}.")
 
-def gen_jsonl(final_path):
-    # jsonl文件名 
-    json_file_path = final_path.replace(".zip", ".jsonl")
-    # 判断 jsonl 文件是否存在，如果不存在，就调用 zipinfo 函数进行处理
-    if not os.path.exists(json_file_path):
-        start_time = time.perf_counter()
-        process_zip(final_path)
-        exec_time = time.perf_counter() - start_time
-        print(f"zip文件 {final_path} 处理完成，耗时 {exec_time:.2f} 秒")
-
-def pack_zip_file():
-    name_before_zip = 'output-' + time.strftime("%Y%m%d-%H%M%S")
-    shutil.move("output", name_before_zip)
-    ziper = zipfile.ZipFile(name_before_zip+".zip", "w", zipfile.ZIP_DEFLATED)
-    for path, dirname, filenames in os.walk(name_before_zip):
-        fpath = path.replace(name_before_zip, '')
-        for fn in filenames:
-            ziper.write(os.path.join(path, fn), os.path.join(fpath, fn))
-    ziper.close()
-    shutil.rmtree(name_before_zip)
-    
 def parse_one_line(line, fastest_ip):
-    global output_size
     rid, addr = line.strip().split(",", 1)
     addr = addr.strip()
     if len(rid) < 3: rid = rid.zfill(3)
@@ -127,12 +102,13 @@ def parse_one_line(line, fastest_ip):
 
     # 拼接 URL 并下载文件https://github.com/imgingroot/httpIPdownloader/archive/refs/heads/main.zip
     url = f"https://codeload.github.com/{author}/{name}/zip/refs/heads/main"
-    final_path = f"output/{rid[-3:]}/{rid}.zip"
+    final_path = f"output/zips/{rid}.zip"
 
     # 检查目录是否存在
     os.makedirs(os.path.dirname(final_path), exist_ok=True)
 
     if not os.path.exists(final_path):
+        # 下载仓库压缩包
         err = down(fastest_ip, url, final_path)
         if err is not None:
             print(f"Error downloading {url}: {err}  ID= {rid}")
@@ -141,38 +117,41 @@ def parse_one_line(line, fastest_ip):
     
     if os.path.exists(final_path):
         print("parsing zip file")
-        gen_jsonl(final_path)
+        # 删除zip文件中的二进制文件
+        process_zip(final_path)
+        # 提取代码语料到jsonl
+        handler = Zipfile2JsonL("output/jsonl", target_encoding="utf-8", clean_src_file=False, plateform="github", author=author)
+        handler(final_path)
         print("zip file parsed.")
-        output_size += os.path.getsize(final_path)
-        if os.path.exists(final_path[:-4] + ".jsonl"):
-            output_size += os.path.getsize(final_path[:-4]+'.jsonl')
-        if os.path.exists(final_path[:-4] + ".meta.jsonl"):
-            output_size += os.path.getsize(final_path[:-4]+'.meta.jsonl')
-        if output_size >= 1024*1024*1024*10:  # 大于10g，打包一下
-            pack_zip_file()
-        output_size = 0
 
 def main():
 
     filename = "repos_list.txt"
-    global output_size
-    output_size = 0
-    for a,_,b in os.walk('output'):
-        for j in b:
-            output_size += os.path.getsize(os.path.join(a, j))
 
     fastest_ip, speeds, err = find_fastest_ip()
+
     print("Fastest IP:", fastest_ip)
     if err is not None:
         print(err)
         return
     for s in speeds:
         print(f"ip: {s['ip']}\t --> {s['speed']} ms \t[{s['is_connected']}]")
+   
+    done_set = set()
+    if os.path.exists("./.done"):
+        with open("./.done",'r',encoding='utf-8')as r:
+            done_set.update(r.read().split("\n"))
 
     with open(filename, "r", encoding="utf-8")as reader:
         for line in reader:
+            rid, addr = line.strip().split(",", 1)
+            if rid in done_set:
+                print(rid, 'exists. PASS')
+                continue
             parse_one_line(line, fastest_ip)
-    if os.listdir("output"): pack_zip_file()
+            with open("./.done", "a", encoding='utf-8')as a:
+                a.write(rid+"\n")
+            done_set.add(rid)
 
 if __name__ == '__main__':
     main()

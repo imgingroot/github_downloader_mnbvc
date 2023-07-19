@@ -52,7 +52,7 @@ def process_zip(input_path: str):
         # 需删除的文件列表
         del_list = []
         # 需要删除的后缀
-        delete_suffix = []
+        delete_suffix = ["DS_Store",]
         # 需要跳过的后缀
         whitelist_suffix = []
         # 所有suffix
