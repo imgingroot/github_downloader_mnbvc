@@ -3,7 +3,10 @@
 *.exe~
 *.dll
 *.so
+*.zip
 *.dylib
+.done
+.temp_done
 __pycache__
 # Test binary, built with `go test -c`
 *.test
