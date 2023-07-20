@@ -96,42 +96,6 @@ class CodeFileInstance:
             "text": self.text
         }
 
-
-class RepoInstance:
-    def __init__(self, file_path: str, plateform: str, author: str):
-        super(RepoInstance, self).__init__()
-        self.file_path = file_path
-        self._plateform = plateform
-        self._files: List[CodeFileInstance] = list()
-        self.author = author
-
-    @property
-    def name(self):
-        # 不同平台下的仓库名修改这里的name解析
-        if debug_mode is True: print(self.file_path.parts)
-        return self.author + "/" + self.file_path.parts[name_position]
-
-    @property
-    def files(self):
-        return self._files
-
-    def files_append(self, file_obj: CodeFileInstance):
-        if file_obj.encoding is None:
-            return
-        if not isinstance(file_obj.text, str):
-            return
-        self._files.append(file_obj)
-
-    def get_dict_list(self):
-        ret = list()
-        for f in self.files:
-            dic = f.get_dict()
-            dic['plateform'] = self._plateform
-            dic['repo_name'] = self.name
-            # yield dic
-            ret.append(dic)
-        return ret
-
 class Zipfile2JsonL:
     def __init__(self, output_root, target_encoding="utf-8", clean_src_file=False, plateform="github", author=""):
         if not os.path.exists(output_root): os.makedirs(output_root)
@@ -167,7 +131,7 @@ class Zipfile2JsonL:
             if code.encoding is None or not isinstance(code.text, str): continue
             dic = code.get_dict()
             dic["plateform"] = self.plateform
-            dic["repo_name"] = file.relative_to(repo_root).parts[0]
+            dic["repo_name"] = self.author + "/" + file.relative_to(repo_root).parts[0]
             with open(self.get_jsonl_file(), "a", encoding="utf-8") as a1, open(".temp_done", "a", encoding="utf-8")as a2:
                 a1.write(json.dumps(dic, ensure_ascii=False) + "\n")
                 a2.write(str(file)+"\n")
