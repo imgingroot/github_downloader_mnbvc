@@ -138,19 +138,15 @@ class Zipfile2JsonL:
             if os.path.getsize(self.get_jsonl_file()) > self.max_jsonl_size:
                 self.chunk_counter += 1
         open(".temp_done","w",encoding="utf-8").close()
+        shutil.rmtree(repo_root)  # 删除解压生成的文件夹
 
     def get_jsonl_file(self):
         return self.output / f"githubcode.{self.chunk_counter}.jsonl"
-
-    def dump_to_jsonl(self, repo_file_info_list):
-        for line in repo_file_info_list:
-            with open(self.get_jsonl_file(), "a", encoding='utf-8')as a:
-                a.write(json.dumps(line, ensure_ascii=False) + "\n")
-            if os.path.getsize(self.get_jsonl_file()) > self.max_jsonl_size:
-                self.chunk_counter += 1
 
     def __call__(self, zip_path):
         zip_path = Path(zip_path)
         assert zip_path.exists(), FileNotFoundError(str(root_dir))
         self.get_zipfile(zip_path)
+        if self.clean_src_file is True:
+            zip_path.unlink()
 
