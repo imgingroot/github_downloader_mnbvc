@@ -87,7 +87,7 @@ def down(fastest_ip, url, final_path):
     shutil.move(target_path, final_path)
     print(f"Moved {target_path} to {final_path}.")
 
-def parse_one_line(line, fastest_ip):
+def parse_one_line(line, fastest_ip, clean_src_file):
     rid, addr = line.strip().split(",", 1)
     addr = addr.strip()
     if len(rid) < 3: rid = rid.zfill(3)
@@ -120,13 +120,11 @@ def parse_one_line(line, fastest_ip):
         # 删除zip文件中的二进制文件
         process_zip(final_path)
         # 提取代码语料到jsonl
-        handler = Zipfile2JsonL("output/jsonl", target_encoding="utf-8", clean_src_file=False, plateform="github", author=author)
+        handler = Zipfile2JsonL("output/jsonl", target_encoding="utf-8", clean_src_file=clean_src_file, plateform="github", author=author)
         handler(final_path)
         print("zip file parsed.")
 
-def main():
-
-    filename = "repos_list.txt"
+def main(file_name, clean_src_file):
 
     fastest_ip, speeds, err = find_fastest_ip()
 
@@ -148,10 +146,14 @@ def main():
             if rid in done_set:
                 print(rid, 'exists. PASS')
                 continue
-            parse_one_line(line, fastest_ip)
+            parse_one_line(line, fastest_ip, clean_src_file)
             with open("./.done", "a", encoding='utf-8')as a:
                 a.write(rid+"\n")
             done_set.add(rid)
 
 if __name__ == '__main__':
-    main()
+
+    filename = "repos_list.txt"
+    clean_src_file = True  # 最终是否是删除zip文件只保留jsonl
+
+    main(file_name=filename, clean_src_file=clean_src_file)
