@@ -133,7 +133,7 @@ def main(file_name, clean_src_file):
         print(err)
         return
     for s in speeds:
-        print(f"ip: {s['ip']}\t --> {s['speed']} ms \t[{s['is_connected']}]")
+        print(f"ip: {s['ip']}\t --> {s['speed']} μs \t[{s['is_connected']}]")
    
     done_set = set()
     if os.path.exists("./.done"):
