@@ -131,6 +131,8 @@ def parse_one_line(line, fastest_ip, clean_src_file):
 
 def main(file_name, clean_src_file):
 
+    #TODO 1:这里需要补上每次中断重启时必要的环境参数，例如目前zip包解压到哪一个了，jsonl在写入哪一个（如果没有jsonl就取最后一个压缩包+1，如果两个都没有就从0开始）。
+
     fastest_ip, speeds, err = find_fastest_ip()
 
     print("Fastest IP:", fastest_ip)
@@ -156,6 +158,7 @@ def main(file_name, clean_src_file):
                 print(f"{done_num} repos was already done. PASS.")
                 done_num = -1
             print("\n"+"↓"*20 + f" {tm()} {rid} start " + "↓" * 20)
+            #TODO 2：这里入参放入TODO 1中拿到的目前仓库编号（因为仓库编号都是从小到大排序的，所以默认可以是0），写入的jsonl位置
             parse_one_line(line, fastest_ip, clean_src_file)
             with open("./.done", "a", encoding='utf-8')as a:
                 a.write(rid+"\n")
