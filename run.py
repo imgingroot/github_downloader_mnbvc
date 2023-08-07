@@ -15,6 +15,9 @@ from converter import Zipfile2JsonL
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
+def tm():
+    return time.strftime("%Y-%m-%d %H:%M:%S")
+
 def test_ip_speed(hostname: str, ip: str):
     try:
         r = requests.head(f"https://{ip}", headers={"host": hostname}, verify=False, timeout=5)
@@ -46,20 +49,17 @@ def find_fastest_ip():
 
 def download(url, filename, fastest_ip):
     '''具体下载操作'''
-    print('----', url, '----')
     ua = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/93.0.4577.82 Safari/537.36'
     host = urlparse(url).hostname
     headers = {"host": host, "User-Agent": ua}
     if fastest_ip:
         url = url.replace(host, fastest_ip, 1)
-
     try:
         resp = requests.get(url, headers=headers, stream=True, verify=False)
         if resp.status_code == 200:
             with open(filename, "wb")as writer:
                 for chunk in resp.iter_content(chunk_size=1024*1024):
                     if chunk: writer.write(chunk)
-            print("download finished")
         else:
             return Exception(f'response error with status code = {resp.status_code}')
     except Exception as e:
@@ -69,23 +69,26 @@ def down(fastest_ip, url, final_path):
     '''下载逻辑'''
     target_path = final_path[:-4] + ".downloading"
 
-    print(f"Downloading {fastest_ip} {url} to {target_path}")
-
     # 如果此前已有downloading文件，说明之前下载未完成，删除历史文件重新下载
     if os.path.exists(target_path): os.unlink(target_path)
     # 优先使用main下载，若不成功再尝试使用master
+    print(f"{tm()} Downloading repo.", end=" ")
     err = download(url, target_path, fastest_ip)
-    print('err1', err)
     if err:
+        print("Failed.")
         # 第二次使用master 仓库名下载
         url = url[:-4] + "master"
+        print(f"{tm()} Try donwloading again.", end=" ")
         err = download(url, target_path, fastest_ip)
-        print('err2', err)
-        if err: return err
-
-    print(f"Downloaded {url}.")
+        # print('err2', err)
+        if err:
+            print("Failed again, error logged.")
+            if os.path.exists(target_path):
+                os.unlink(target_path)
+            return err
+    print(f"DONE! {tm()}")
     shutil.move(target_path, final_path)
-    print(f"Moved {target_path} to {final_path}.")
+    print(f"{tm()} Moved downloading file to zip file.")
 
 def parse_one_line(line, fastest_ip, clean_src_file):
     rid, addr = line.strip().split(",", 1)
@@ -111,18 +114,20 @@ def parse_one_line(line, fastest_ip, clean_src_file):
         # 下载仓库压缩包
         err = down(fastest_ip, url, final_path)
         if err is not None:
-            print(f"Error downloading {url}: {err}  ID= {rid}")
+            # print(f"Error downloading {url}: {err}  ID= {rid}")
             with open("output/error.log", "a", encoding='utf-8')as a:
                 a.write(f"{rid}\t{url}\t{err}\n")
     
     if os.path.exists(final_path):
-        print("parsing zip file")
         # 删除zip文件中的二进制文件
+        print(f"{tm()} Deleting byte files.", end=" ")
         process_zip(final_path)
+        print(f"DONE! {tm()}")
         # 提取代码语料到jsonl
+        print(f"{tm()} Generating jsonl files.", end=" ")
         handler = Zipfile2JsonL("output/jsonl", target_encoding="utf-8", clean_src_file=clean_src_file, plateform="github", author=author)
         handler(final_path)
-        print("zip file parsed.")
+        print(f"DONE! {tm()}")
 
 def main(file_name, clean_src_file):
 
@@ -133,22 +138,28 @@ def main(file_name, clean_src_file):
         print(err)
         return
     for s in speeds:
-        print(f"ip: {s['ip']}\t --> {s['speed']} ms \t[{s['is_connected']}]")
+        print(f"ip: {s['ip']}\t --> {s['speed']} μs \t[{s['is_connected']}]")
    
     done_set = set()
     if os.path.exists("./.done"):
         with open("./.done",'r',encoding='utf-8')as r:
             done_set.update(r.read().split("\n"))
 
+    done_num = 0
     with open(filename, "r", encoding="utf-8")as reader:
         for line in reader:
             rid, addr = line.strip().split(",", 1)
             if rid in done_set:
-                print(rid, 'exists. PASS')
+                done_num += 1
                 continue
+            if done_num >= 0:
+                print(f"{done_num} repos was already done. PASS.")
+                done_num = -1
+            print("\n"+"↓"*20 + f" {tm()} {rid} start " + "↓" * 20)
             parse_one_line(line, fastest_ip, clean_src_file)
             with open("./.done", "a", encoding='utf-8')as a:
                 a.write(rid+"\n")
+                print("↑"*20 + f" {tm()} {rid} done " + "↑" * 21)
             done_set.add(rid)
 
 if __name__ == '__main__':
