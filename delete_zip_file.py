@@ -15,7 +15,7 @@ from traceback import print_exc
 from charset_mnbvc import api
 from ruamel.std.zipfile import delete_from_zip_file
 
-logging.basicConfig(level=logging.INFO, format='[%(levelname)s] %(message)s', datefmt='%Y-%m-%d %H:%M:%S')
+logging.basicConfig(level=logging.ERROR, format='[%(levelname)s] %(message)s', datefmt='%Y-%m-%d %H:%M:%S')
 logger = logging.getLogger(__name__)
 
 
