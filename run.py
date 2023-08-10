@@ -1,5 +1,6 @@
 import os
 import time
+import glob
 import shutil
 import zipfile
 import urllib3
@@ -90,7 +91,7 @@ def down(fastest_ip, url, final_path):
     shutil.move(target_path, final_path)
     print(f"{tm()} Moved downloading file to zip file.")
 
-def parse_one_line(line, fastest_ip, clean_src_file):
+def parse_one_line(line, fastest_ip, clean_src_file, output_folder, chunk_counter):
     rid, addr = line.strip().split(",", 1)
     addr = addr.strip()
     if len(rid) < 3: rid = rid.zfill(3)
@@ -125,13 +126,30 @@ def parse_one_line(line, fastest_ip, clean_src_file):
         print(f"DONE! {tm()}")
         # 提取代码语料到jsonl
         print(f"{tm()} Generating jsonl files.", end=" ")
-        handler = Zipfile2JsonL("output/jsonl", target_encoding="utf-8", clean_src_file=clean_src_file, plateform="github", author=author)
-        handler(final_path)
+        handler = Zipfile2JsonL(output_folder, target_encoding="utf-8", clean_src_file=clean_src_file, plateform="github", author=author, chunk_counter=chunk_counter)
+        handler(final_path)  # final_path: str, 最后的zip文件
+        chunk_counter = handler.return_counter()
         print(f"DONE! {tm()}")
+    return chunk_counter
 
 def main(file_name, clean_src_file):
 
     #TODO 1:这里需要补上每次中断重启时必要的环境参数，例如目前zip包解压到哪一个了，jsonl在写入哪一个（如果没有jsonl就取最后一个压缩包+1，如果两个都没有就从0开始）。
+    output_folder = "output/jsonl"
+    jsonl_fs = glob.glob(os.path.join(output_folder, "*.jsonl"))
+    zip_fs = glob.glob(os.path.join(output_folder, "*.zip"))
+    
+    if len(jsonl_fs) > 0:
+        jsonl_fs.sort(key=lambda x: (len(x), x))
+        chunk_counter = int(jsonl_fs[-1].split(".")[-2])
+        print(f'找到了{jsonl_fs[-1]}，将续写该文件')
+    elif len(zip_fs) > 0:
+        zip_fs.sort(key=lambda x: (len(x), x))
+        chunk_counter = int(zip_fs[-1].split(".")[-2]) + 1
+        print(f'没有jsonl文件，找到了{zip_fs[-1]}，将新建第{chunk_counter}个jsonl文件')
+    else:
+        chunk_counter = 0
+        print("没有找到jsonl文件或zip文件，将从0开始写jsonl")
 
     fastest_ip, speeds, err = find_fastest_ip()
 
@@ -159,7 +177,8 @@ def main(file_name, clean_src_file):
                 done_num = -1
             print("\n"+"↓"*20 + f" {tm()} {rid} start " + "↓" * 20)
             #TODO 2：这里入参放入TODO 1中拿到的目前仓库编号（因为仓库编号都是从小到大排序的，所以默认可以是0），写入的jsonl位置
-            parse_one_line(line, fastest_ip, clean_src_file)
+            # 需要获取converter返回的新的chunk_counter，否则这里不知道在写入jsonl的时候counter是否有增加
+            chunk_counter = parse_one_line(line, fastest_ip, clean_src_file, output_folder=output_folder, chunk_counter=chunk_counter)
             with open("./.done", "a", encoding='utf-8')as a:
                 a.write(rid+"\n")
                 print("↑"*20 + f" {tm()} {rid} done " + "↑" * 21)
