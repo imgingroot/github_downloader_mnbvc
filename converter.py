@@ -158,7 +158,7 @@ class Zipfile2JsonL:
         repo_root = file_path.parent / ('zipout-' + file_path.stem)
         try:
             # 如果ropo_root存在，说明之前已经解压过，在提取过程中中断了，不必重新解压。
-            raise OSError # 用作测试直接不解压提取
+            # raise OSError # 用作测试直接不解压提取
             if not repo_root.exists():
                 with zipfile.ZipFile(file_path, "r") as zf:
                     zf.extractall(repo_root)
