@@ -56,7 +56,7 @@ def download(url, filename, fastest_ip):
     if fastest_ip:
         url = url.replace(host, fastest_ip, 1)
     try:
-        resp = requests.get(url, headers=headers, stream=True, verify=False)
+        resp = requests.get(url, headers=headers, stream=True, verify=False, timeout=5*60)
         if resp.status_code == 200:
             with open(filename, "wb")as writer:
                 for chunk in resp.iter_content(chunk_size=1024*1024):
@@ -73,13 +73,13 @@ def down(fastest_ip, url, final_path):
     # 如果此前已有downloading文件，说明之前下载未完成，删除历史文件重新下载
     if os.path.exists(target_path): os.unlink(target_path)
     # 优先使用main下载，若不成功再尝试使用master
-    print(f"{tm()} Downloading repo.", end=" ")
+    print(f"{tm()} Downloading repo.", end=" ", flush=True)
     err = download(url, target_path, fastest_ip)
     if err:
         print("Failed.")
         # 第二次使用master 仓库名下载
         url = url[:-4] + "master"
-        print(f"{tm()} Try donwloading again.", end=" ")
+        print(f"{tm()} Try downloading again.", end=" ", flush=True)
         err = download(url, target_path, fastest_ip)
         # print('err2', err)
         if err:
@@ -121,11 +121,11 @@ def parse_one_line(line, fastest_ip, clean_src_file, output_folder, chunk_counte
     
     if os.path.exists(final_path):
         # 删除zip文件中的二进制文件
-        print(f"{tm()} Deleting byte files.", end=" ")
+        print(f"{tm()} Deleting byte files.", end=" ", flush=True)
         process_zip(final_path)
         print(f"DONE! {tm()}")
         # 提取代码语料到jsonl
-        print(f"{tm()} Generating jsonl files.", end=" ")
+        print(f"{tm()} Generating jsonl files.", end=" ", flush=True)
         handler = Zipfile2JsonL(output_folder, target_encoding="utf-8", clean_src_file=clean_src_file, plateform="github", author=author, chunk_counter=chunk_counter)
         handler(final_path)  # final_path: str, 最后的zip文件
         chunk_counter = handler.return_counter()
@@ -134,7 +134,7 @@ def parse_one_line(line, fastest_ip, clean_src_file, output_folder, chunk_counte
 
 def main(file_name, clean_src_file):
 
-    #TODO 1:这里需要补上每次中断重启时必要的环境参数，例如目前zip包解压到哪一个了，jsonl在写入哪一个（如果没有jsonl就取最后一个压缩包+1，如果两个都没有就从0开始）。
+    # 这里是中断重启时必要的环境参数，例如目前zip包解压到哪一个了，jsonl在写入哪一个（如果没有jsonl就取最后一个压缩包+1，如果两个都没有就从0开始）。
     output_folder = "output/jsonl"
     jsonl_fs = glob.glob(os.path.join(output_folder, "*.jsonl"))
     zip_fs = glob.glob(os.path.join(output_folder, "*.zip"))
@@ -176,7 +176,6 @@ def main(file_name, clean_src_file):
                 print(f"{done_num} repos was already done. PASS.")
                 done_num = -1
             print("\n"+"↓"*20 + f" {tm()} {rid} start " + "↓" * 20)
-            #TODO 2：这里入参放入TODO 1中拿到的目前仓库编号（因为仓库编号都是从小到大排序的，所以默认可以是0），写入的jsonl位置
             # 需要获取converter返回的新的chunk_counter，否则这里不知道在写入jsonl的时候counter是否有增加
             chunk_counter = parse_one_line(line, fastest_ip, clean_src_file, output_folder=output_folder, chunk_counter=chunk_counter)
             with open("./.done", "a", encoding='utf-8')as a:
