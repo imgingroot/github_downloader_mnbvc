@@ -189,3 +189,5 @@ if __name__ == '__main__':
     clean_src_file = True  # 最终是否是删除zip文件只保留jsonl
 
     main(file_name=filename, clean_src_file=clean_src_file)
+
+    print(f"ALL DONE AT " + tm())
