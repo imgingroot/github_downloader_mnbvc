@@ -13,7 +13,6 @@ import traceback
 from typing import List
 from pathlib import PurePosixPath, Path, PosixPath
 from charset_mnbvc import api
-import psutil
 #######################################################
 debug_mode = False
 name_position = 3
@@ -130,11 +129,12 @@ class Zipfile2JsonL:
         
     def extract_without_unpack(self, zip_path):
         try:
-            for Zfile in zf.filelist:
-                if Zfile.is_dir(): continue
-                filepath = Zfile.filename
-                code = CodeFileInstance(zip_path, Zfile, target_encoding="utf-8", zf=zf)
-                self.save_code(code)
+            with zipfile.ZipFile(zip_path, "r")as zf:
+                for Zfile in zf.filelist:
+                    if Zfile.is_dir(): continue
+                    filepath = Zfile.filename
+                    code = CodeFileInstance(zip_path, Zfile, target_encoding="utf-8", zf=zf)
+                    self.save_code(code)
         except Exception as e:
             traceback.print_exc()
             with open(self.output/"convert_error.log",'a')as a:
