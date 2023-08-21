@@ -13,7 +13,6 @@ import traceback
 from typing import List
 from pathlib import PurePosixPath, Path, PosixPath
 from charset_mnbvc import api
-import psutil
 #######################################################
 debug_mode = False
 name_position = 3
@@ -130,11 +129,12 @@ class Zipfile2JsonL:
         
     def extract_without_unpack(self, zip_path):
         try:
-            for Zfile in zf.filelist:
-                if Zfile.is_dir(): continue
-                filepath = Zfile.filename
-                code = CodeFileInstance(zip_path, Zfile, target_encoding="utf-8", zf=zf)
-                self.save_code(code)
+            with zipfile.ZipFile(zip_path, "r")as zf:
+                for Zfile in zf.filelist:
+                    if Zfile.is_dir(): continue
+                    filepath = Zfile.filename
+                    code = CodeFileInstance(zip_path, Zfile, target_encoding="utf-8", zf=zf)
+                    self.save_code(code)
         except Exception as e:
             traceback.print_exc()
             with open(self.output/"convert_error.log",'a')as a:
@@ -157,7 +157,7 @@ class Zipfile2JsonL:
         # 因为仓库压缩包的文件名不一定是仓库的文件名，所以专门指定一个路径
         repo_root = file_path.parent / ('zipout-' + file_path.stem)
         try:
-            # raise OSError # 用作测试直接不解压提取
+            raise OSError # 用作测试直接不解压提取
             if repo_root.exists(): shutil.rmtree(repo_root)
             with zipfile.ZipFile(file_path, "r") as zf:
                 zf.extractall(repo_root)
