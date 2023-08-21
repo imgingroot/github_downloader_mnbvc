@@ -157,7 +157,7 @@ class Zipfile2JsonL:
         # 因为仓库压缩包的文件名不一定是仓库的文件名，所以专门指定一个路径
         repo_root = file_path.parent / ('zipout-' + file_path.stem)
         try:
-            raise OSError # 用作测试直接不解压提取
+            # raise OSError # 用作测试直接不解压提取
             if repo_root.exists(): shutil.rmtree(repo_root)
             with zipfile.ZipFile(file_path, "r") as zf:
                 zf.extractall(repo_root)
