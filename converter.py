@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 # -*- coding:utf-8 -*-
 import os
+import io
 import sys
 import argparse
 import json
@@ -129,12 +130,19 @@ class Zipfile2JsonL:
         
     def extract_without_unpack(self, zip_path):
         try:
-            with zipfile.ZipFile(zip_path, "r")as zf:
-                for Zfile in zf.filelist:
-                    if Zfile.is_dir(): continue
-                    filepath = Zfile.filename
-                    code = CodeFileInstance(zip_path, Zfile, target_encoding="utf-8", zf=zf)
-                    self.save_code(code)
+            try:
+                zf = zipfile.ZipFile(zip_path, "r")
+            except zipfile.BadZipFile:  # 解压过程中遇到 Bad magic number for central directory 问题的解决办法
+                with open(zip_path, "rb")as r: data=r.read()
+                idx = data.find(b"PK\005\006")
+                data = io.BytesIO(data[:idx+22])
+                zf = zipfile.ZipFile(data, "r")
+            for Zfile in zf.filelist:
+                if Zfile.is_dir(): continue
+                filepath = Zfile.filename
+                code = CodeFileInstance(zip_path, Zfile, target_encoding="utf-8", zf=zf)
+                self.save_code(code)
+            zf.close()
         except Exception as e:
             traceback.print_exc()
             with open(self.output/"convert_error.log",'a')as a:
@@ -159,8 +167,16 @@ class Zipfile2JsonL:
         try:
             # raise OSError # 用作测试直接不解压提取
             if repo_root.exists(): shutil.rmtree(repo_root)
-            with zipfile.ZipFile(file_path, "r") as zf:
-                zf.extractall(repo_root)
+            try:
+                with zipfile.ZipFile(file_path, "r") as zf:
+                    zf.extractall(repo_root)
+            except zipfile.BadZipFile:  # 解压过程中遇到 Bad magic number for central directory 问题的解决办法
+                if repo_root.exists(): shutil.rmtree(repo_root)
+                with open(file_path, 'rb')as r: data=r.read()
+                idx = data.find(b"PK\005\006")
+                data = io.BytesIO(data[:idx+22])
+                with zipfile.ZipFile(data, 'r')as zf:
+                    zf.extractall(repo_root)
             file_list = repo_root.rglob("**/*.*")
             for file in file_list:
                 if not file.is_file(): continue
