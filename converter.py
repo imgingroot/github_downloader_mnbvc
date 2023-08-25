@@ -225,7 +225,7 @@ class Zipfile2JsonL:
         zip_path = Path(zip_path)
         self.temp_name = self.output / ("tempFile_" + zip_path.stem)  # 本仓库的临时jsonl文件
         if os.path.exists(self.temp_name): os.unlink(self.temp_name)
-        assert zip_path.exists(), FileNotFoundError(str(root_dir))
+        assert zip_path.exists(), FileNotFoundError(str(zip_path))
         self.get_zipfile(zip_path)
         if self.clean_src_file is True:
             zip_path.unlink()
