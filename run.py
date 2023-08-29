@@ -91,7 +91,7 @@ def down(fastest_ip, url, final_path):
     shutil.move(target_path, final_path)
     print(f"{tm()} Moved downloading file to zip file.")
 
-def parse_one_line(line, fastest_ip, clean_src_file, output_folder, chunk_counter):
+def parse_one_line(line, fastest_ip, clean_src_file, output_folder, chunk_counter, final=False):
     rid, addr = line.strip().split(",", 1)
     addr = addr.strip()
     if len(rid) < 3: rid = rid.zfill(3)
@@ -127,7 +127,7 @@ def parse_one_line(line, fastest_ip, clean_src_file, output_folder, chunk_counte
         # 提取代码语料到jsonl
         print(f"{tm()} Generating jsonl files.", end=" ", flush=True)
         handler = Zipfile2JsonL(output_folder, target_encoding="utf-8", clean_src_file=clean_src_file, plateform="github", author=author, chunk_counter=chunk_counter)
-        handler(final_path)  # final_path: str, 最后的zip文件
+        handler(final_path, final=final)  # final_path: str, 最后的zip文件; final: bool, 是否是repos_list的最后一行（即最后一个仓库）
         chunk_counter = handler.return_counter()
         print(f"DONE! {tm()}")
     return chunk_counter
@@ -167,7 +167,8 @@ def main(file_name, clean_src_file):
 
     done_num = 0
     with open(filename, "r", encoding="utf-8")as reader:
-        for line in reader:
+        file_data = reader.readlines()
+        for idx,line in enumerate(file_data):
             rid, addr = line.strip().split(",", 1)
             if rid in done_set:
                 done_num += 1
@@ -176,8 +177,10 @@ def main(file_name, clean_src_file):
                 print(f"{done_num} repos was already done. PASS.")
                 done_num = -1
             print("\n"+"↓"*20 + f" {tm()} {rid} start " + "↓" * 20)
+            final = False
+            if idx == len(file_data): final = True
             # 需要获取converter返回的新的chunk_counter，否则这里不知道在写入jsonl的时候counter是否有增加
-            chunk_counter = parse_one_line(line, fastest_ip, clean_src_file, output_folder=output_folder, chunk_counter=chunk_counter)
+            chunk_counter = parse_one_line(line, fastest_ip, clean_src_file, output_folder=output_folder, chunk_counter=chunk_counter, final=final)
             with open("./.done", "a", encoding='utf-8')as a:
                 a.write(rid+"\n")
                 print("↑"*20 + f" {tm()} {rid} done " + "↑" * 21)
