@@ -221,7 +221,7 @@ class Zipfile2JsonL:
     def get_jsonl_file(self):
         return self.output / f"githubcode.{self.chunk_counter}.jsonl"
 
-    def __call__(self, zip_path):
+    def __call__(self, zip_path, final=False):
         zip_path = Path(zip_path)
         self.temp_name = self.output / ("tempFile_" + zip_path.stem)  # 本仓库的临时jsonl文件
         if os.path.exists(self.temp_name): os.unlink(self.temp_name)
@@ -229,3 +229,5 @@ class Zipfile2JsonL:
         self.get_zipfile(zip_path)
         if self.clean_src_file is True:
             zip_path.unlink()
+        if final is True and os.path.exists(self.get_jsonl_file()): # 最后一个仓库解析完打成压缩包
+            self.create_zip(self.get_jsonl_file())
