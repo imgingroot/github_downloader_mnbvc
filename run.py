@@ -118,6 +118,7 @@ def parse_one_line(line, fastest_ip, clean_src_file, output_folder, chunk_counte
             # print(f"Error downloading {url}: {err}  ID= {rid}")
             with open("output/error.log", "a", encoding='utf-8')as a:
                 a.write(f"{rid}\t{url}\t{err}\n")
+            return chunk_counter, True
     
     if os.path.exists(final_path):
         # 删除zip文件中的二进制文件
@@ -130,7 +131,7 @@ def parse_one_line(line, fastest_ip, clean_src_file, output_folder, chunk_counte
         handler(final_path, final=final)  # final_path: str, 最后的zip文件; final: bool, 是否是repos_list的最后一行（即最后一个仓库）
         chunk_counter = handler.return_counter()
         print(f"DONE! {tm()}")
-    return chunk_counter
+    return chunk_counter, False
 
 def main(file_name, clean_src_file):
 
@@ -161,8 +162,9 @@ def main(file_name, clean_src_file):
         print(f"ip: {s['ip']}\t --> {s['speed']} μs \t[{s['is_connected']}]")
    
     done_set = set()
-    if os.path.exists("./.done"):
-        with open("./.done",'r',encoding='utf-8')as r:
+    done_file = "./output/.done"
+    if os.path.exists(done_file):
+        with open(done_file,'r',encoding='utf-8')as r:
             done_set.update(r.read().split("\n"))
 
     done_num = 0
@@ -180,11 +182,14 @@ def main(file_name, clean_src_file):
             final = False
             if idx == len(file_data): final = True
             # 需要获取converter返回的新的chunk_counter，否则这里不知道在写入jsonl的时候counter是否有增加
-            chunk_counter = parse_one_line(line, fastest_ip, clean_src_file, output_folder=output_folder, chunk_counter=chunk_counter, final=final)
-            with open("./.done", "a", encoding='utf-8')as a:
-                a.write(rid+"\n")
+            chunk_counter, err = parse_one_line(line, fastest_ip, clean_src_file, output_folder=output_folder, chunk_counter=chunk_counter, final=final)
+            if err is True:
+                print("↑"*20 + f" {tm()} {rid} ERROR " + "↑" * 21)
+            else:
+                with open(done_file, "a", encoding='utf-8')as a:
+                    a.write(rid+"\n")
                 print("↑"*20 + f" {tm()} {rid} done " + "↑" * 21)
-            done_set.add(rid)
+                done_set.add(rid)
 
 if __name__ == '__main__':
 
