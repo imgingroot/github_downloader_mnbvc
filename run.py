@@ -168,34 +168,46 @@ def main(file_name, clean_src_file):
             done_set.update(r.read().split("\n"))
 
     done_num = 0
+    new_add = 0
     with open(filename, "r", encoding="utf-8")as reader:
         file_data = reader.readlines()
+        file_length = len(file_data)
         for idx,line in enumerate(file_data):
             rid, addr = line.strip().split(",", 1)
             if rid in done_set:
                 done_num += 1
                 continue
-            if done_num >= 0:
-                print(f"{done_num} repos was already done. PASS.")
-                done_num = -1
-            print("\n"+"↓"*20 + f" {tm()} {rid} start " + "↓" * 20)
+            # if done_num >= 0:
+            #     print(f"{done_num} repos was already done. PASS.")
+            #     done_num = -1
+            print("\n"+"↓"*20 + f" {tm()} {rid} {idx+1}/{file_length} start " + "↓" * 20)
             final = False
             if idx == len(file_data): final = True
             # 需要获取converter返回的新的chunk_counter，否则这里不知道在写入jsonl的时候counter是否有增加
             chunk_counter, err = parse_one_line(line, fastest_ip, clean_src_file, output_folder=output_folder, chunk_counter=chunk_counter, final=final)
             if err is True:
-                print("↑"*20 + f" {tm()} {rid} ERROR " + "↑" * 21)
+                print("↑"*20 + f" {tm()} {rid} ERROR " + "↑" * 31)
             else:
+                new_add += 1
                 with open(done_file, "a", encoding='utf-8')as a:
                     a.write(rid+"\n")
-                print("↑"*20 + f" {tm()} {rid} done " + "↑" * 21)
+                print("↑"*20 + f" {tm()} {rid} done " + "↑" * 31)
                 done_set.add(rid)
+
+        return file_length, done_num, new_add
 
 if __name__ == '__main__':
 
     filename = "repos_list.txt"
     clean_src_file = True  # 最终是否是删除zip文件只保留jsonl
 
-    main(file_name=filename, clean_src_file=clean_src_file)
+    file_length, done_num, new_add = main(file_name=filename, clean_src_file=clean_src_file)
 
     print(f"ALL DONE AT " + tm())
+    print(f"爬取情况如下：")
+    print(f"\t共 {file_length} 个待爬仓库")
+    print(f"\t已爬取 {done_num+new_add} 个仓库")
+    print(f"\t本次新增 {new_add} 个")
+    print("爬取过程中可能会有各种原因导致一些仓库爬取失败，您可以隔一段时间（防止是网络原因导致）再次重启该爬虫。")
+    print("如果数次重启新增仓库数量都为 0，则表明爬取已经结束，您可以压缩并提交您最终的 output 文件。")
+    print("感谢您为中国 AI 发展做出的贡献！！！")
