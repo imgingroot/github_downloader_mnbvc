@@ -153,7 +153,7 @@ class Zipfile2JsonL:
         if code.encoding is None or not isinstance(code.text, str): return
         dic = code.get_dict()
         dic["来源"] = self.plateform
-        dic["仓库名"] = self.author + "/" + dic['repo_name']
+        dic["仓库名"] = self.author + "/" + dic['仓库名']
         with open(self.temp_name, "a", encoding="utf-8") as a1:
             a1.write(json.dumps(dic, ensure_ascii=False) + "\n")
         #if os.path.getsize(self.get_jsonl_file()) > self.max_jsonl_size:
