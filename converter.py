@@ -14,6 +14,7 @@ import traceback
 from typing import List
 from pathlib import PurePosixPath, Path, PosixPath
 from charset_mnbvc import api
+from datetime import datetime
 #######################################################
 debug_mode = False
 name_position = 3
@@ -113,7 +114,7 @@ class CodeFileInstance:
             "原始编码": self.encoding,
             "md5": self.md5,
             "text": self.text,
-            "时间": "20240000"
+            "时间": datetime.now().strftime('%Y%m%d')
         }
 
 class Zipfile2JsonL:
