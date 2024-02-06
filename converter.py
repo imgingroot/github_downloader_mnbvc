@@ -14,6 +14,7 @@ import traceback
 from typing import List
 from pathlib import PurePosixPath, Path, PosixPath
 from charset_mnbvc import api
+from datetime import datetime
 #######################################################
 debug_mode = False
 name_position = 3
@@ -104,15 +105,16 @@ class CodeFileInstance:
 
     def get_dict(self):
         return {
-            "plateform": "",
-            "repo_name": self._reponame,
-            "name": self.name+self.ext,
+            "来源": "",
+            "仓库名": self._reponame,
+            "文件名": self.name+self.ext,
             "ext": self.ext,
             "path": self.path,
             "size": self.size,
-            "source_encoding": self.encoding,
+            "原始编码": self.encoding,
             "md5": self.md5,
-            "text": self.text
+            "text": self.text,
+            "时间": datetime.now().strftime('%Y%m%d')
         }
 
 class Zipfile2JsonL:
@@ -151,8 +153,8 @@ class Zipfile2JsonL:
     def save_code(self, code):
         if code.encoding is None or not isinstance(code.text, str): return
         dic = code.get_dict()
-        dic["plateform"] = self.plateform
-        dic["repo_name"] = self.author + "/" + dic['repo_name']
+        dic["来源"] = self.plateform
+        dic["仓库名"] = self.author + "/" + dic['仓库名']
         with open(self.temp_name, "a", encoding="utf-8") as a1:
             a1.write(json.dumps(dic, ensure_ascii=False) + "\n")
         #if os.path.getsize(self.get_jsonl_file()) > self.max_jsonl_size:
@@ -177,7 +179,7 @@ class Zipfile2JsonL:
                 data = io.BytesIO(data[:idx+22])
                 with zipfile.ZipFile(data, 'r')as zf:
                     zf.extractall(repo_root)
-            file_list = repo_root.rglob("**/*.*")
+            file_list = repo_root.rglob("**/*")
             for file in file_list:
                 if not file.is_file(): continue
                 code = CodeFileInstance(repo_root, file, self.target_encoding)

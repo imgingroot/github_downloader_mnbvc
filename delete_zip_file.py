@@ -87,8 +87,8 @@ def process_zip(input_path: str):
             elif file_info["size"] > 1 * 1024 * 1024:
                 del_list.append(file_info["path"])
             # 删除长度大于15的文件
-            elif len(file_info["ext"]) > 15:
-                del_list.append(file_info["path"])
+            # elif len(file_info["ext"]) > 15:
+            #     del_list.append(file_info["path"])
             # 如果文件大于32k，读取全文件看是否二进制，如是，本仓库所有该后缀文件直接删除
             else:
                 if file_info["size"] <= 32 * 1024:
