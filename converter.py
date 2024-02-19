@@ -64,6 +64,9 @@ class CodeFileInstance:
             except Exception as err:
                 print("================")
                 traceback.print_exc()
+                with open("./output/decode_error.log", "a", encoding="utf-8")as a:
+                    a.write(self._path+"\n")
+                    a.write(traceback.format_exc()+"\n")
                 # sys.stderr.write(f"Error: {str(err)}\n")
             # text = charset_mnbvc.api.convert_encoding(file_bytes, self._encoding, self.target_encoding)
             # text可能会转码失败，输出的还是原编码文本
@@ -148,6 +151,7 @@ class Zipfile2JsonL:
         except Exception as e:
             traceback.print_exc()
             with open(self.output/"convert_error.log",'a')as a:
+                a.wirte(traceback.format_exc()+"\n")
                 a.write(str(zip_path)+'\n')
 
     def save_code(self, code):

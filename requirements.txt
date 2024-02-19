@@ -1,4 +1,3 @@
-cchardet
 ruamel.std.zipfile
 requests
 urllib3
